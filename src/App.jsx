@@ -4,9 +4,7 @@ import './App.css';
 function App() {
   const [theme, setTheme] = useState('light');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  
-  // Auth Modes: 'login', 'signup', 'forgot'
-  const [authMode, setAuthMode] = useState('login');
+  const [authMode, setAuthMode] = useState('login'); // 'login', 'signup', 'forgot'
   
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -14,50 +12,54 @@ function App() {
   
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const [activeTab, setActiveTab] = useState('gallery'); // 'gallery', 'trash'
   const [selectedCategory, setSelectedCategory] = useState('All');
 
-  // استرجاع الصور والمحذوفات من الـ localStorage
+  // Load images & trash from LocalStorage safely (Base64 format support)
   const [images, setImages] = useState(() => {
     try {
-      const savedImages = localStorage.getItem('vault_images');
-      return savedImages ? JSON.parse(savedImages) : [];
-    } catch (e) {
+      const saved = localStorage.getItem('vault_images');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
       return [];
     }
   });
 
   const [trash, setTrash] = useState(() => {
     try {
-      const savedTrash = localStorage.getItem('vault_trash');
-      return savedTrash ? JSON.parse(savedTrash) : [];
-    } catch (e) {
+      const saved = localStorage.getItem('vault_trash');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
       return [];
     }
   });
 
-  // حفظ الصور في الـ localStorage بشكل دائم
+  // Save images to LocalStorage automatically
   useEffect(() => {
     try {
       localStorage.setItem('vault_images', JSON.stringify(images));
     } catch (e) {
-      console.error('Storage limit reached or error saving images');
+      console.error('Storage limit reached');
     }
   }, [images]);
 
-  // حفظ المحذوفات في الـ localStorage
+  // Save trash to LocalStorage automatically
   useEffect(() => {
     try {
       localStorage.setItem('vault_trash', JSON.stringify(trash));
     } catch (e) {
-      console.error('Storage limit reached or error saving trash');
+      console.error('Storage limit reached');
     }
   }, [trash]);
 
-  // Image Upload Preview States
+  // Upload preview states
   const [previewUrl, setPreviewUrl] = useState('');
   const [uploadCategory, setUploadCategory] = useState('Nature');
+
+  // Confirmation Modal state for permanent delete
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
   const handleLogin = (e) => {
     e.preventDefault();
@@ -66,7 +68,11 @@ function App() {
       return;
     }
     setErrorMsg('');
-    setIsLoggedIn(true);
+    setIsLoading(true);
+    setTimeout(() => {
+      setIsLoading(false);
+      setIsLoggedIn(true);
+    }, 800);
   };
 
   const handleSignup = (e) => {
@@ -80,11 +86,15 @@ function App() {
       return;
     }
     setErrorMsg('');
-    setSuccessMsg('Account created successfully! Please sign in.');
+    setIsLoading(true);
     setTimeout(() => {
-      setAuthMode('login');
-      setSuccessMsg('');
-    }, 1500);
+      setIsLoading(false);
+      setSuccessMsg('Account created successfully! Please sign in.');
+      setTimeout(() => {
+        setAuthMode('login');
+        setSuccessMsg('');
+      }, 1200);
+    }, 800);
   };
 
   const handleForgot = (e) => {
@@ -94,10 +104,14 @@ function App() {
       return;
     }
     setErrorMsg('');
-    setSuccessMsg('Password reset instructions sent to your identifier.');
+    setIsLoading(true);
+    setTimeout(() => {
+      setIsLoading(false);
+      setSuccessMsg('Password reset instructions sent to your identifier.');
+    }, 800);
   };
 
-  // قراءة الصورة بصيغة Base64 لحفظها بشكل ثابت لا يضيع مع الـ Refresh
+  // Convert image to Base64 so it persists on Refresh inside localStorage
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -109,7 +123,6 @@ function App() {
     }
   };
 
-  // الضغط على Save لحفظ الصورة نهائياً في المعرض والـ localStorage
   const handleSaveImage = (e) => {
     e.preventDefault();
     if (!previewUrl) return;
@@ -117,7 +130,8 @@ function App() {
     const newImg = {
       id: Date.now(),
       url: previewUrl,
-      category: uploadCategory
+      category: uploadCategory,
+      date: new Date().toLocaleDateString()
     };
 
     setImages([newImg, ...images]);
@@ -148,6 +162,7 @@ function App() {
 
   const handlePermanentDelete = (id) => {
     setTrash(trash.filter(img => img.id !== id));
+    setDeleteConfirmId(null);
   };
 
   const toggleTheme = () => {
@@ -224,7 +239,9 @@ function App() {
                       </span>
                     </div>
 
-                    <button type="submit" className="login-btn">Enter Vault</button>
+                    <button type="submit" className="login-btn" disabled={isLoading}>
+                      {isLoading ? 'Authenticating...' : 'Enter Vault'}
+                    </button>
 
                     <div className="form-actions-bottom">
                       <span>Don't have an account? </span>
@@ -290,7 +307,9 @@ function App() {
                       </div>
                     </div>
 
-                    <button type="submit" className="login-btn">Register</button>
+                    <button type="submit" className="login-btn" disabled={isLoading}>
+                      {isLoading ? 'Creating Account...' : 'Register'}
+                    </button>
 
                     <div className="form-actions-bottom">
                       <span>Already have an account? </span>
@@ -330,7 +349,9 @@ function App() {
                       </div>
                     </div>
 
-                    <button type="submit" className="login-btn">Send Reset Link</button>
+                    <button type="submit" className="login-btn" disabled={isLoading}>
+                      {isLoading ? 'Sending...' : 'Send Reset Link'}
+                    </button>
 
                     <div className="form-actions-bottom">
                       <span 
@@ -349,7 +370,12 @@ function App() {
             <div className="vault-container">
               <div className="vault-header">
                 <h2>Private Photo Vault</h2>
-                <p className="vault-user-email">Account: {identifier}</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
+                  <p className="vault-user-email">Account: {identifier}</p>
+                  <span style={{ fontSize: '11px', background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', padding: '3px 8px', borderRadius: '8px', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
+                    📊 Items Stored: {images.length}
+                  </span>
+                </div>
               </div>
 
               <div className="vault-nav-tabs">
@@ -390,7 +416,7 @@ function App() {
 
                   {/* Image Preview & Save Section */}
                   {previewUrl && (
-                    <div className="preview-container animate-fade" style={{ background: 'rgba(0,0,0,0.3)', padding: '15px', borderRadius: '16px', textAlign: 'center', margin: '10px 0' }}>
+                    <div className="preview-container animate-fade" style={{ background: 'rgba(0,0,0,0.35)', padding: '15px', borderRadius: '16px', textAlign: 'center', margin: '10px 0', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
                       <p style={{ fontSize: '13px', marginBottom: '8px', color: '#38bdf8', fontWeight: '600' }}>Image Preview</p>
                       <img src={previewUrl} alt="Preview" style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '10px', marginBottom: '10px', border: '1px solid #38bdf8' }} />
                       
@@ -443,13 +469,27 @@ function App() {
                         <img src={img.url} alt="Deleted item" style={{ opacity: 0.6 }} />
                         <div className="trash-actions">
                           <button className="restore-btn" onClick={() => handleRestoreImage(img.id)}>Restore</button>
-                          <button className="perm-delete-btn" onClick={() => handlePermanentDelete(img.id)}>Delete</button>
+                          <button className="perm-delete-btn" onClick={() => setDeleteConfirmId(img.id)}>Delete</button>
                         </div>
                       </div>
                     ))
                   ) : (
                     <p className="no-images-text">Trash is empty.</p>
                   )}
+                </div>
+              )}
+
+              {/* Confirmation Modal for Permanent Delete */}
+              {deleteConfirmId && (
+                <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+                  <div style={{ background: '#1e293b', padding: '25px', borderRadius: '16px', textAlign: 'center', maxWidth: '320px', width: '90%', border: '1px solid rgba(239, 68, 68, 0.4)' }}>
+                    <h3 style={{ color: '#f87171', marginBottom: '10px' }}>Confirm Permanent Deletion</h3>
+                    <p style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '20px' }}>Are you sure you want to permanently delete this photo? This action cannot be undone.</p>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button onClick={() => handlePermanentDelete(deleteConfirmId)} className="login-btn" style={{ flex: 1, marginTop: 0, background: '#ef4444' }}>Yes, Delete</button>
+                      <button onClick={() => setDeleteConfirmId(null)} className="login-btn" style={{ flex: 1, marginTop: 0, background: '#64748b' }}>Cancel</button>
+                    </div>
+                  </div>
                 </div>
               )}
 
