@@ -14,21 +14,27 @@ function App() {
   const [successMsg, setSuccessMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Active Main Tab: 'gallery', 'favorites', 'trash', 'profile', 'analytics', 'security'
+  // Active Main Tab: 'gallery', 'favorites', 'trash', 'profile', 'analytics', 'security', 'logs'
   const [activeTab, setActiveTab] = useState('gallery'); 
   const [selectedCategory, setSelectedCategory] = useState('All');
   
-  // NEW: Search Query state
+  // Search & Sorting states
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('newest'); // 'newest', 'oldest'
 
-  // NEW: Lightbox Modal state
+  // Lightbox & Slideshow states
   const [lightboxImg, setLightboxImg] = useState(null);
+  const [isSlideshowActive, setIsSlideshowActive] = useState(false);
 
-  // NEW: Change Password states inside security
+  // NEW: Multi-Select state
+  const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
+  const [selectedImageIds, setSelectedImageIds] = useState([]);
+
+  // Change Password states
   const [oldPasswordInput, setOldPasswordInput] = useState('');
   const [newPasswordInput, setNewPasswordInput] = useState('');
 
-  // Load images, trash, profile & security settings from LocalStorage
+  // Load images, trash, profile, security & activity logs from LocalStorage
   const [images, setImages] = useState(() => {
     try {
       const saved = localStorage.getItem('vault_images');
@@ -57,6 +63,24 @@ function App() {
     } catch { return { pin: '1234', twoFactor: false, accountPassword: 'password123' }; }
   });
 
+  // NEW: Activity Logs state
+  const [activityLogs, setActivityLogs] = useState(() => {
+    try {
+      const saved = localStorage.getItem('vault_logs');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+
+  // Helper function to log activities
+  const addLog = (action) => {
+    const newLog = {
+      id: Date.now(),
+      action,
+      time: new Date().toLocaleString()
+    };
+    setActivityLogs(prev => [newLog, ...prev]);
+  };
+
   // Save states automatically
   useEffect(() => {
     localStorage.setItem('vault_images', JSON.stringify(images));
@@ -73,6 +97,26 @@ function App() {
   useEffect(() => {
     localStorage.setItem('vault_security', JSON.stringify(securitySettings));
   }, [securitySettings]);
+
+  useEffect(() => {
+    localStorage.setItem('vault_logs', JSON.stringify(activityLogs));
+  }, [activityLogs]);
+
+  // Slideshow Effect
+  useEffect(() => {
+    let interval;
+    if (isSlideshowActive && images.length > 0) {
+      let currentIndex = 0;
+      setLightboxImg(images[0]);
+      interval = setInterval(() => {
+        currentIndex = (currentIndex + 1) % images.length;
+        setLightboxImg(images[currentIndex]);
+      }, 3000);
+    } else {
+      clearInterval(interval);
+    }
+    return () => clearInterval(interval);
+  }, [isSlideshowActive, images]);
 
   // Upload preview states
   const [previewUrl, setPreviewUrl] = useState('');
@@ -93,6 +137,7 @@ function App() {
       setIsLoading(false);
       setIsLoggedIn(true);
       setUserProfile(prev => ({ ...prev, name: identifier }));
+      addLog('Signed in to vault successfully');
     }, 800);
   };
 
@@ -111,6 +156,7 @@ function App() {
     setTimeout(() => {
       setIsLoading(false);
       setSuccessMsg('Account created successfully! Please sign in.');
+      addLog('Created a new vault account');
       setTimeout(() => {
         setAuthMode('login');
         setSuccessMsg('');
@@ -129,10 +175,10 @@ function App() {
     setTimeout(() => {
       setIsLoading(false);
       setSuccessMsg('Password reset instructions sent to your identifier.');
+      addLog('Requested password reset');
     }, 800);
   };
 
-  // Convert image to Base64 so it persists on Refresh
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -159,6 +205,7 @@ function App() {
     setImages([newImg, ...images]);
     setPreviewUrl('');
     setUploadCategory('Nature');
+    addLog(`Uploaded new image to category: ${uploadCategory}`);
   };
 
   const handleCancelUpload = () => {
@@ -171,6 +218,7 @@ function App() {
     if (imgToDelete) {
       setImages(images.filter(img => img.id !== id));
       setTrash([imgToDelete, ...trash]);
+      addLog('Moved an image to trash');
     }
   };
 
@@ -179,23 +227,44 @@ function App() {
     if (imgToRestore) {
       setTrash(trash.filter(img => img.id !== id));
       setImages([imgToRestore, ...images]);
+      addLog('Restored an image from trash');
     }
   };
 
   const handlePermanentDelete = (id) => {
     setTrash(trash.filter(img => img.id !== id));
     setDeleteConfirmId(null);
+    addLog('Permanently deleted an image');
   };
 
   const handleToggleFavorite = (id) => {
     setImages(images.map(img => img.id === id ? { ...img, isFavorite: !img.isFavorite } : img));
+    addLog('Updated favorite status for an image');
+  };
+
+  // NEW: Multi-Select Bulk Actions Handlers
+  const handleToggleSelectImage = (id) => {
+    if (selectedImageIds.includes(id)) {
+      setSelectedImageIds(selectedImageIds.filter(item => item !== id));
+    } else {
+      setSelectedImageIds([...selectedImageIds, id]);
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedImageIds.length === 0) return;
+    const itemsToDelete = images.filter(img => selectedImageIds.includes(img.id));
+    setImages(images.filter(img => !selectedImageIds.includes(img.id)));
+    setTrash([...itemsToDelete, ...trash]);
+    setSelectedImageIds([]);
+    setIsMultiSelectMode(false);
+    addLog(`Moved ${itemsToDelete.length} images to trash in bulk`);
   };
 
   const toggleTheme = () => {
     setTheme(theme === 'light' ? 'dark' : 'light');
   };
 
-  // NEW: Change Password Handler
   const handleChangePassword = (e) => {
     e.preventDefault();
     if (!oldPasswordInput || !newPasswordInput) {
@@ -206,11 +275,11 @@ function App() {
     setOldPasswordInput('');
     setNewPasswordInput('');
     alert('Password updated successfully!');
+    addLog('Changed account password');
   };
 
-  // NEW: Export Backup JSON
   const handleExportData = () => {
-    const dataObj = { images, trash, userProfile, securitySettings };
+    const dataObj = { images, trash, userProfile, securitySettings, activityLogs };
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dataObj, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute("href", dataStr);
@@ -218,9 +287,9 @@ function App() {
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
+    addLog('Exported backup JSON data');
   };
 
-  // NEW: Import Backup JSON
   const handleImportData = (e) => {
     const fileReader = new FileReader();
     if (e.target.files[0]) {
@@ -232,7 +301,9 @@ function App() {
           if (parsed.trash) setTrash(parsed.trash);
           if (parsed.userProfile) setUserProfile(parsed.userProfile);
           if (parsed.securitySettings) setSecuritySettings(parsed.securitySettings);
+          if (parsed.activityLogs) setActivityLogs(parsed.activityLogs);
           alert('Data imported successfully!');
+          addLog('Imported backup JSON data');
         } catch {
           alert('Invalid backup JSON file.');
         }
@@ -240,12 +311,16 @@ function App() {
     }
   };
 
-  // Filtered Images with Category & Search Support
+  // Filtered and Sorted Images
   const filteredImages = images.filter(img => {
     const matchesCategory = selectedCategory === 'All' || img.category === selectedCategory;
     const matchesSearch = img.category.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           img.date.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
+  }).sort((a, b) => {
+    if (sortBy === 'newest') return b.id - a.id;
+    if (sortBy === 'oldest') return a.id - b.id;
+    return 0;
   });
 
   const favoriteImages = images.filter(img => img.isFavorite);
@@ -493,12 +568,18 @@ function App() {
                 >
                   🛡️ Security
                 </button>
+                <button 
+                  className={`tab-btn ${activeTab === 'logs' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('logs')}
+                  style={{ gridColumn: 'span 3' }}
+                >
+                  📋 Activity Logs
+                </button>
               </div>
 
               {/* 1. GALLERY SCREEN */}
               {activeTab === 'gallery' && (
                 <>
-                  {/* NEW: Search Bar Component */}
                   <div className="input-group" style={{ margin: '10px 0 5px 0' }}>
                     <div className="input-wrapper">
                       <span className="icon">🔍</span>
@@ -510,6 +591,41 @@ function App() {
                       />
                     </div>
                   </div>
+
+                  {/* NEW: Sorting and Slideshow / Multi-select Controls */}
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '10px', alignItems: 'center' }}>
+                    <select 
+                      value={sortBy} 
+                      onChange={(e) => setSortBy(e.target.value)}
+                      style={{ flex: 1, padding: '6px', borderRadius: '8px', background: '#0f172a', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', fontSize: '12px', outline: 'none' }}
+                    >
+                      <option value="newest">Sort: Newest First</option>
+                      <option value="oldest">Sort: Oldest First</option>
+                    </select>
+
+                    <button 
+                      onClick={() => setIsSlideshowActive(true)}
+                      style={{ padding: '6px 10px', borderRadius: '8px', background: '#0284c7', color: '#fff', border: 'none', fontSize: '12px', cursor: 'pointer' }}
+                    >
+                      ▶️ Slideshow
+                    </button>
+
+                    <button 
+                      onClick={() => { setIsMultiSelectMode(!isMultiSelectMode); setSelectedImageIds([]); }}
+                      style={{ padding: '6px 10px', borderRadius: '8px', background: isMultiSelectMode ? '#ef4444' : '#475569', color: '#fff', border: 'none', fontSize: '12px', cursor: 'pointer' }}
+                    >
+                      {isMultiSelectMode ? 'Cancel Select' : '☑️ Select'}
+                    </button>
+                  </div>
+
+                  {isMultiSelectMode && selectedImageIds.length > 0 && (
+                    <button 
+                      onClick={handleBulkDelete}
+                      style={{ width: '100%', marginBottom: '10px', padding: '8px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' }}
+                    >
+                      Delete Selected ({selectedImageIds.length})
+                    </button>
+                  )}
 
                   <div className="categories-bar">
                     {['All', 'Nature', 'Scenery'].map(cat => (
@@ -557,24 +673,46 @@ function App() {
                   <div className="gallery-grid-full">
                     {filteredImages.length > 0 ? (
                       filteredImages.map(img => (
-                        <div key={img.id} className="image-card-full" onClick={() => setLightboxImg(img)} style={{ cursor: 'pointer' }}>
+                        <div 
+                          key={img.id} 
+                          className="image-card-full" 
+                          onClick={() => {
+                            if (isMultiSelectMode) {
+                              handleToggleSelectImage(img.id);
+                            } else {
+                              setLightboxImg(img);
+                            }
+                          }} 
+                          style={{ cursor: 'pointer', border: selectedImageIds.includes(img.id) ? '3px solid #38bdf8' : 'none' }}
+                        >
                           <img src={img.url} alt="Vault item" />
                           <span className="img-badge">{img.category}</span>
-                          <button 
-                            style={{ position: 'absolute', top: '8px', left: '8px', background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', fontSize: '14px', zIndex: 2 }}
-                            onClick={(e) => { e.stopPropagation(); handleToggleFavorite(img.id); }}
-                            title="Favorite"
-                          >
-                            {img.isFavorite ? '⭐' : '☆'}
-                          </button>
-                          <button 
-                            className="delete-icon-btn"
-                            onClick={(e) => { e.stopPropagation(); handleDeleteImage(img.id); }}
-                            title="Delete"
-                            style={{ zIndex: 2 }}
-                          >
-                            ❌
-                          </button>
+                          
+                          {isMultiSelectMode && (
+                            <span style={{ position: 'absolute', top: '8px', right: '8px', background: selectedImageIds.includes(img.id) ? '#38bdf8' : 'rgba(0,0,0,0.5)', color: '#fff', width: '22px', height: '22px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}>
+                              {selectedImageIds.includes(img.id) ? '✓' : ''}
+                            </span>
+                          )}
+
+                          {!isMultiSelectMode && (
+                            <>
+                              <button 
+                                style={{ position: 'absolute', top: '8px', left: '8px', background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', fontSize: '14px', zIndex: 2 }}
+                                onClick={(e) => { e.stopPropagation(); handleToggleFavorite(img.id); }}
+                                title="Favorite"
+                              >
+                                {img.isFavorite ? '⭐' : '☆'}
+                              </button>
+                              <button 
+                                className="delete-icon-btn"
+                                onClick={(e) => { e.stopPropagation(); handleDeleteImage(img.id); }}
+                                title="Delete"
+                                style={{ zIndex: 2 }}
+                              >
+                                ❌
+                              </button>
+                            </>
+                          )}
                         </div>
                       ))
                     ) : (
@@ -662,7 +800,7 @@ function App() {
                 </div>
               )}
 
-              {/* 5. ANALYTICS SCREEN + NEW BACKUP EXPORT/IMPORT */}
+              {/* 5. ANALYTICS SCREEN */}
               {activeTab === 'analytics' && (
                 <div className="animate-fade" style={{ padding: '15px 0', textAlign: 'left' }}>
                   <h3 style={{ color: '#38bdf8', marginBottom: '15px' }}>Vault Analytics & Storage</h3>
@@ -684,7 +822,7 @@ function App() {
                 </div>
               )}
 
-              {/* 6. SECURITY SETTINGS SCREEN + NEW CHANGE PASSWORD */}
+              {/* 6. SECURITY SETTINGS SCREEN */}
               {activeTab === 'security' && (
                 <div className="animate-fade" style={{ padding: '15px 0', textAlign: 'left' }}>
                   <h3 style={{ color: '#38bdf8', marginBottom: '15px' }}>Security Configuration</h3>
@@ -701,7 +839,6 @@ function App() {
                     </div>
                   </div>
 
-                  {/* NEW: Change Password Section */}
                   <form onSubmit={handleChangePassword} style={{ marginTop: '15px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '15px' }}>
                     <h4 style={{ color: '#38bdf8', marginBottom: '10px', fontSize: '14px' }}>Change Account Password</h4>
                     <div className="input-group" style={{ marginBottom: '8px' }}>
@@ -737,14 +874,47 @@ function App() {
                 </div>
               )}
 
-              {/* NEW: Lightbox Modal for Full Image View */}
+              {/* 7. ACTIVITY LOGS SCREEN */}
+              {activeTab === 'logs' && (
+                <div className="animate-fade" style={{ padding: '15px 0', textAlign: 'left' }}>
+                  <h3 style={{ color: '#38bdf8', marginBottom: '15px' }}>User Activity Audit Trail</h3>
+                  <div style={{ background: 'rgba(255,255,255,0.05)', padding: '10px', borderRadius: '12px', maxHeight: '250px', overflowY: 'auto' }}>
+                    {activityLogs.length > 0 ? (
+                      activityLogs.map(log => (
+                        <div key={log.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', padding: '8px 0', fontSize: '12px' }}>
+                          <p style={{ color: '#fff', marginBottom: '2px' }}>• {log.action}</p>
+                          <span style={{ color: '#94a3b8', fontSize: '10px' }}>{log.time}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="no-images-text">No activities recorded yet.</p>
+                    )}
+                  </div>
+                  {activityLogs.length > 0 && (
+                    <button 
+                      onClick={() => setActivityLogs([])} 
+                      style={{ marginTop: '10px', padding: '6px 12px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
+                    >
+                      Clear Logs
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Lightbox / Slideshow Modal */}
               {lightboxImg && (
-                <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.85)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 1100, padding: '20px' }} onClick={() => setLightboxImg(null)}>
+                <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.85)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 1100, padding: '20px' }} onClick={() => { setLightboxImg(null); setIsSlideshowActive(false); }}>
                   <div style={{ background: '#1e293b', padding: '20px', borderRadius: '16px', maxWidth: '500px', width: '90%', textAlign: 'center', border: '1px solid rgba(56, 189, 248, 0.4)' }} onClick={(e) => e.stopPropagation()}>
                     <img src={lightboxImg.url} alt="Enlarged view" style={{ width: '100%', maxHeight: '350px', objectFit: 'contain', borderRadius: '12px', marginBottom: '12px' }} />
                     <p style={{ color: '#38bdf8', fontSize: '14px', fontWeight: 'bold' }}>Category: {lightboxImg.category}</p>
                     <p style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '15px' }}>Added on: {lightboxImg.date}</p>
-                    <button onClick={() => setLightboxImg(null)} className="login-btn" style={{ marginTop: 0, background: '#ef4444' }}>Close Preview</button>
+                    
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      {isSlideshowActive && (
+                        <button onClick={() => setIsSlideshowActive(false)} className="login-btn" style={{ flex: 1, marginTop: 0, background: '#f59e0b' }}>Pause Slideshow</button>
+                      )}
+                      <button onClick={() => { setLightboxImg(null); setIsSlideshowActive(false); }} className="login-btn" style={{ flex: 1, marginTop: 0, background: '#ef4444' }}>Close</button>
+                    </div>
                   </div>
                 </div>
               )}
