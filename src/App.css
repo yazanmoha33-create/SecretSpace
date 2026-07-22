@@ -7,7 +7,7 @@
   font-family: 'Inter', sans-serif;
 }
 
-/* 1. الخلفية العامة (الخارجية) للصفحة: ألوان فاتحة وهادئة مع حركة بطيئة */
+/* الخلفية العامة (الخارجية): سيلفر غامق معدني أنيق مع حركة تدريجية بطيئة */
 .app-container {
   min-height: 100vh;
   display: flex;
@@ -22,15 +22,15 @@
 }
 
 .app-container.light {
-  background: linear-gradient(135deg, #e0f2fe, #f0fdf4, #f3e8ff, #e2e8f0);
+  background: linear-gradient(135deg, #2b323b, #3f4a59, #1e242c, #4a5568);
   animation: softGentleShift 22s ease infinite;
-  color: #1f2937;
+  color: #f1f5f9;
 }
 
 .app-container.dark {
-  background: linear-gradient(135deg, #090d16, #0f172a, #171d30, #0b0f19);
+  background: linear-gradient(135deg, #0f141c, #1a222d, #11161f, #1f2937);
   animation: softGentleShift 22s ease infinite;
-  color: #f1f1f1;
+  color: #f1f5f9;
 }
 
 @keyframes softGentleShift {
@@ -49,8 +49,8 @@
 }
 
 .theme-toggle-btn {
-  background: rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   padding: 8px 16px;
   border-radius: 20px;
   color: inherit;
@@ -60,13 +60,9 @@
   transition: all 0.3s ease;
 }
 
-.dark .theme-toggle-btn {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
 .theme-toggle-btn:hover {
   transform: scale(1.05);
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .main-layout {
@@ -115,10 +111,6 @@
 }
 
 .highlight-text {
-  color: #0284c7;
-}
-
-.dark .highlight-text {
   color: #38bdf8;
 }
 
@@ -127,7 +119,7 @@
   opacity: 0.85;
 }
 
-/* 2. البطاقة الداخلية (تسجيل الدخول والخزنة): أصبحت دائماً باللون الغامق مع الحركات واللمعة */
+/* البطاقة الداخلية الصغيرة: ألوان غامقة مع الحركات واللمعة */
 .login-card {
   width: 100%;
   background: linear-gradient(135deg, #033454, #022338, #071321);
@@ -136,7 +128,7 @@
   color: #ffffff;
   padding: 35px 25px;
   border-radius: 24px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35), 0 0 25px rgba(2, 132, 199, 0.2);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 25px rgba(2, 132, 199, 0.2);
   border: 1.5px solid rgba(56, 189, 248, 0.35);
   position: relative;
   overflow: hidden;
