@@ -14,45 +14,55 @@ function App() {
   const [successMsg, setSuccessMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const [activeTab, setActiveTab] = useState('gallery'); // 'gallery', 'trash'
+  // Active Main Tab: 'gallery', 'trash', 'profile', 'analytics', 'security', 'favorites'
+  const [activeTab, setActiveTab] = useState('gallery'); 
   const [selectedCategory, setSelectedCategory] = useState('All');
 
-  // Load images & trash from LocalStorage safely (Base64 format support)
+  // Load images, trash, profile & security settings from LocalStorage
   const [images, setImages] = useState(() => {
     try {
       const saved = localStorage.getItem('vault_images');
       return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
+    } catch { return []; }
   });
 
   const [trash, setTrash] = useState(() => {
     try {
       const saved = localStorage.getItem('vault_trash');
       return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
+    } catch { return []; }
   });
 
-  // Save images to LocalStorage automatically
-  useEffect(() => {
+  const [userProfile, setUserProfile] = useState(() => {
     try {
-      localStorage.setItem('vault_images', JSON.stringify(images));
-    } catch (e) {
-      console.error('Storage limit reached');
-    }
+      const saved = localStorage.getItem('vault_profile');
+      return saved ? JSON.parse(saved) : { name: 'Vault User', phone: '', bio: 'Securing private moments.' };
+    } catch { return { name: 'Vault User', phone: '', bio: 'Securing private moments.' }; }
+  });
+
+  const [securitySettings, setSecuritySettings] = useState(() => {
+    try {
+      const saved = localStorage.getItem('vault_security');
+      return saved ? JSON.parse(saved) : { pin: '1234', twoFactor: false };
+    } catch { return { pin: '1234', twoFactor: false }; }
+  });
+
+  // Save states automatically
+  useEffect(() => {
+    localStorage.setItem('vault_images', JSON.stringify(images));
   }, [images]);
 
-  // Save trash to LocalStorage automatically
   useEffect(() => {
-    try {
-      localStorage.setItem('vault_trash', JSON.stringify(trash));
-    } catch (e) {
-      console.error('Storage limit reached');
-    }
+    localStorage.setItem('vault_trash', JSON.stringify(trash));
   }, [trash]);
+
+  useEffect(() => {
+    localStorage.setItem('vault_profile', JSON.stringify(userProfile));
+  }, [userProfile]);
+
+  useEffect(() => {
+    localStorage.setItem('vault_security', JSON.stringify(securitySettings));
+  }, [securitySettings]);
 
   // Upload preview states
   const [previewUrl, setPreviewUrl] = useState('');
@@ -72,6 +82,7 @@ function App() {
     setTimeout(() => {
       setIsLoading(false);
       setIsLoggedIn(true);
+      setUserProfile(prev => ({ ...prev, name: identifier }));
     }, 800);
   };
 
@@ -111,7 +122,7 @@ function App() {
     }, 800);
   };
 
-  // Convert image to Base64 so it persists on Refresh inside localStorage
+  // Convert image to Base64 so it persists on Refresh
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -131,6 +142,7 @@ function App() {
       id: Date.now(),
       url: previewUrl,
       category: uploadCategory,
+      isFavorite: false,
       date: new Date().toLocaleDateString()
     };
 
@@ -165,6 +177,10 @@ function App() {
     setDeleteConfirmId(null);
   };
 
+  const handleToggleFavorite = (id) => {
+    setImages(images.map(img => img.id === id ? { ...img, isFavorite: !img.isFavorite } : img));
+  };
+
   const toggleTheme = () => {
     setTheme(theme === 'light' ? 'dark' : 'light');
   };
@@ -172,6 +188,8 @@ function App() {
   const filteredImages = selectedCategory === 'All' 
     ? images 
     : images.filter(img => img.category === selectedCategory);
+
+  const favoriteImages = images.filter(img => img.isFavorite);
 
   return (
     <div className={`app-container ${theme}`}>
@@ -371,28 +389,54 @@ function App() {
               <div className="vault-header">
                 <h2>Private Photo Vault</h2>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
-                  <p className="vault-user-email">Account: {identifier}</p>
+                  <p className="vault-user-email">Account: {userProfile.name}</p>
                   <span style={{ fontSize: '11px', background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', padding: '3px 8px', borderRadius: '8px', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
-                    📊 Items Stored: {images.length}
+                    📊 Stored: {images.length}
                   </span>
                 </div>
               </div>
 
-              <div className="vault-nav-tabs">
+              {/* Navigation Tabs including the 4 New Screens */}
+              <div className="vault-nav-tabs" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
                 <button 
                   className={`tab-btn ${activeTab === 'gallery' ? 'active' : ''}`}
                   onClick={() => setActiveTab('gallery')}
                 >
-                  📁 Gallery ({images.length})
+                  📁 Gallery
+                </button>
+                <button 
+                  className={`tab-btn ${activeTab === 'favorites' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('favorites')}
+                >
+                  ⭐ Favorites ({favoriteImages.length})
                 </button>
                 <button 
                   className={`tab-btn ${activeTab === 'trash' ? 'active' : ''}`}
                   onClick={() => setActiveTab('trash')}
                 >
-                  🗑️ Trash ({trash.length})
+                  🗑️ Trash
+                </button>
+                <button 
+                  className={`tab-btn ${activeTab === 'profile' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('profile')}
+                >
+                  👤 Profile
+                </button>
+                <button 
+                  className={`tab-btn ${activeTab === 'analytics' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('analytics')}
+                >
+                  📈 Analytics
+                </button>
+                <button 
+                  className={`tab-btn ${activeTab === 'security' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('security')}
+                >
+                  🛡️ Security
                 </button>
               </div>
 
+              {/* 1. GALLERY SCREEN */}
               {activeTab === 'gallery' && (
                 <>
                   <div className="categories-bar">
@@ -414,7 +458,6 @@ function App() {
                     </label>
                   </div>
 
-                  {/* Image Preview & Save Section */}
                   {previewUrl && (
                     <div className="preview-container animate-fade" style={{ background: 'rgba(0,0,0,0.35)', padding: '15px', borderRadius: '16px', textAlign: 'center', margin: '10px 0', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
                       <p style={{ fontSize: '13px', marginBottom: '8px', color: '#38bdf8', fontWeight: '600' }}>Image Preview</p>
@@ -446,6 +489,13 @@ function App() {
                           <img src={img.url} alt="Vault item" />
                           <span className="img-badge">{img.category}</span>
                           <button 
+                            style={{ position: 'absolute', top: '8px', left: '8px', background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', fontSize: '14px' }}
+                            onClick={() => handleToggleFavorite(img.id)}
+                            title="Favorite"
+                          >
+                            {img.isFavorite ? '⭐' : '☆'}
+                          </button>
+                          <button 
                             className="delete-icon-btn"
                             onClick={() => handleDeleteImage(img.id)}
                             title="Delete"
@@ -461,8 +511,37 @@ function App() {
                 </>
               )}
 
+              {/* 2. FAVORITES SCREEN */}
+              {activeTab === 'favorites' && (
+                <div className="gallery-grid-full" style={{ marginTop: '15px' }}>
+                  {favoriteImages.length > 0 ? (
+                    favoriteImages.map(img => (
+                      <div key={img.id} className="image-card-full">
+                        <img src={img.url} alt="Favorite item" />
+                        <span className="img-badge">{img.category}</span>
+                        <button 
+                          style={{ position: 'absolute', top: '8px', left: '8px', background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', fontSize: '14px' }}
+                          onClick={() => handleToggleFavorite(img.id)}
+                        >
+                          ⭐
+                        </button>
+                        <button 
+                          className="delete-icon-btn"
+                          onClick={() => handleDeleteImage(img.id)}
+                        >
+                          ❌
+                        </button>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="no-images-text">No favorite images selected yet.</p>
+                  )}
+                </div>
+              )}
+
+              {/* 3. TRASH SCREEN */}
               {activeTab === 'trash' && (
-                <div className="gallery-grid-full">
+                <div className="gallery-grid-full" style={{ marginTop: '15px' }}>
                   {trash.length > 0 ? (
                     trash.map(img => (
                       <div key={img.id} className="image-card-full">
@@ -476,6 +555,76 @@ function App() {
                   ) : (
                     <p className="no-images-text">Trash is empty.</p>
                   )}
+                </div>
+              )}
+
+              {/* 4. PROFILE SCREEN (NEW) */}
+              {activeTab === 'profile' && (
+                <div className="animate-fade" style={{ padding: '15px 0' }}>
+                  <h3 style={{ color: '#38bdf8', marginBottom: '15px' }}>User Profile Settings</h3>
+                  <div className="input-group">
+                    <label>Display Name</label>
+                    <div className="input-wrapper">
+                      <span className="icon">👤</span>
+                      <input 
+                        type="text" 
+                        value={userProfile.name}
+                        onChange={(e) => setUserProfile({ ...userProfile, name: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="input-group">
+                    <label>Bio / Description</label>
+                    <div className="input-wrapper">
+                      <span className="icon">📝</span>
+                      <input 
+                        type="text" 
+                        value={userProfile.bio}
+                        onChange={(e) => setUserProfile({ ...userProfile, bio: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <p style={{ fontSize: '12px', color: '#22c55e', marginTop: '10px' }}>✓ Profile details updated automatically.</p>
+                </div>
+              )}
+
+              {/* 5. ANALYTICS SCREEN (NEW) */}
+              {activeTab === 'analytics' && (
+                <div className="animate-fade" style={{ padding: '15px 0', textAlign: 'left' }}>
+                  <h3 style={{ color: '#38bdf8', marginBottom: '15px' }}>Vault Analytics & Storage</h3>
+                  <div style={{ background: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '12px', marginBottom: '10px' }}>
+                    <p style={{ fontSize: '14px', marginBottom: '8px' }}>📁 Total Stored Images: <b>{images.length}</b></p>
+                    <p style={{ fontSize: '14px', marginBottom: '8px' }}>🌲 Nature Category: <b>{images.filter(i => i.category === 'Nature').length}</b></p>
+                    <p style={{ fontSize: '14px', marginBottom: '8px' }}>🌄 Scenery Category: <b>{images.filter(i => i.category === 'Scenery').length}</b></p>
+                    <p style={{ fontSize: '14px' }}>🗑️ Items in Trash: <b>{trash.length}</b></p>
+                  </div>
+                </div>
+              )}
+
+              {/* 6. SECURITY SETTINGS SCREEN (NEW) */}
+              {activeTab === 'security' && (
+                <div className="animate-fade" style={{ padding: '15px 0', textAlign: 'left' }}>
+                  <h3 style={{ color: '#38bdf8', marginBottom: '15px' }}>Security Configuration</h3>
+                  <div className="input-group">
+                    <label>Vault Security PIN</label>
+                    <div className="input-wrapper">
+                      <span className="icon">🔐</span>
+                      <input 
+                        type="password" 
+                        value={securitySettings.pin}
+                        onChange={(e) => setSecuritySettings({ ...securitySettings, pin: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '15px' }}>
+                    <input 
+                      type="checkbox" 
+                      id="2fa"
+                      checked={securitySettings.twoFactor}
+                      onChange={(e) => setSecuritySettings({ ...securitySettings, twoFactor: e.target.checked })}
+                    />
+                    <label htmlFor="2fa" style={{ fontSize: '13px', cursor: 'pointer' }}>Enable Two-Factor Authentication (2FA)</label>
+                  </div>
                 </div>
               )}
 
