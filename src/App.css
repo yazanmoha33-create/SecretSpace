@@ -7,7 +7,6 @@
   font-family: 'Inter', sans-serif;
 }
 
-/* الخلفية العامة (الخارجية): أزرق فاتح هادئ مع حركة تدريجية بطيئة */
 .app-container {
   min-height: 100vh;
   display: flex;
@@ -127,7 +126,6 @@
   opacity: 0.85;
 }
 
-/* البطاقة الداخلية الصغيرة: ألوان غامقة مع الحركات واللمعة */
 .login-card {
   width: 100%;
   background: linear-gradient(135deg, #033454, #022338, #071321);
@@ -228,7 +226,7 @@
 }
 
 .icon {
-  margin-left: 8px;
+  margin-right: 8px;
   font-size: 15px;
 }
 
@@ -265,31 +263,6 @@
   transform: translateY(-2px);
 }
 
-.forgot-link-inline {
-  font-size: 12px;
-  text-align: right;
-  margin-top: 6px;
-  display: block;
-}
-
-.form-actions-bottom {
-  text-align: center;
-  margin-top: 15px;
-  font-size: 13px;
-}
-
-.link-text {
-  color: #38bdf8;
-  cursor: pointer;
-  font-weight: 600;
-  transition: opacity 0.2s;
-}
-
-.link-text:hover {
-  text-decoration: underline;
-  opacity: 0.8;
-}
-
 .error-text {
   color: #f87171;
   font-size: 12px;
@@ -297,14 +270,6 @@
   margin: 0;
 }
 
-.success-text {
-  color: #4ade80;
-  font-size: 12px;
-  text-align: center;
-  margin: 0;
-}
-
-/* تنسيقات الخزنة الداخلية */
 .vault-container {
   display: flex;
   flex-direction: column;
@@ -526,7 +491,6 @@
   z-index: 10;
 }
 
-/* الحركات */
 @keyframes fadeIn {
   from { opacity: 0; transform: scale(0.97); }
   to { opacity: 1; transform: scale(1); }
