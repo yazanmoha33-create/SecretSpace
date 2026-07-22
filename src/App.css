@@ -196,12 +196,19 @@
   background-color: #0369a1;
 }
 
-.form-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 10px;
+/* تنسيق موقع رابط نسيت كلمة المرور تحت خانة الباسورد مباشرة */
+.forgot-link-inline {
   font-size: 12px;
+  text-align: right;
+  margin-top: 4px;
+  display: block;
+}
+
+/* تنسيق موقع رابط إنشاء الحساب تحت زر تسجيل الدخول */
+.form-actions-bottom {
+  text-align: center;
+  margin-top: 12px;
+  font-size: 13px;
 }
 
 .link-text {
