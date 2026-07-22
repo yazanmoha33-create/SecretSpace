@@ -1,33 +1,62 @@
 import React, { useState } from 'react';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  sendPasswordResetEmail 
+} from 'firebase/auth';
 import { auth } from './firebase';
 import './App.css';
 
 export default function App() {
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const [username, setUsername] = useState('');
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [isForgotPass, setIsForgotPass] = useState(false);
+
+  const [identifier, setIdentifier] = useState(''); // البريد أو رقم الهاتف
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
   const [user, setUser] = useState(null);
 
-  const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
-  };
+  const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
-  const handleLogin = async (e) => {
+  // دالة تسجيل الدخول أو إنشاء حساب أو استعادة الباسورد
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setMessage('');
+
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, username, password);
+      // 1. حالة استعادة كلمة المرور
+      if (isForgotPass) {
+        await sendPasswordResetEmail(auth, identifier);
+        setMessage('تم إرسال رابط استعادة كلمة المرور إلى بريدك الإلكتروني.');
+        return;
+      }
+
+      // 2. حالة إنشاء حساب جديد
+      if (isRegistering) {
+        if (password !== confirmPassword) {
+          setError('كلمتا المرور غير متطابقتان. الرجاء التأكد منهما.');
+          return;
+        }
+        const userCredential = await createUserWithEmailAndPassword(auth, identifier, password);
+        setUser(userCredential.user);
+        return;
+      }
+
+      // 3. حالة تسجيل الدخول العادية
+      const userCredential = await signInWithEmailAndPassword(auth, identifier, password);
       setUser(userCredential.user);
+
     } catch (err) {
-      setError('Failed to login. Please check your credentials.');
+      setError('حدث خطأ، يرجى التأكد من البيانات المدخلة.');
     }
   };
 
   return (
     <div className={`app-container ${isDarkMode ? 'dark' : 'light'}`}>
-      {/* زر تغيير الوضع في الأعلى بالزاوية */}
       <div className="top-bar-settings">
         <button className="theme-toggle-btn" onClick={toggleTheme}>
           {isDarkMode ? 'Light Mode ☀️' : 'Dark Mode 🌙'}
@@ -35,7 +64,6 @@ export default function App() {
       </div>
 
       <div className="main-layout">
-        {/* النصوص والشعار في الأعلى تماماً */}
         <div className="hero-section">
           <div className="logo-area">
             <span className="logo-text">SecretSpace</span>
@@ -45,53 +73,105 @@ export default function App() {
           <p>Secure storage for your private photos and videos with absolute safety</p>
         </div>
 
-        {/* بطاقة تسجيل الدخول في منتصف الشاشة */}
         <div className="login-card">
           <div className="login-header">
-            <h2>Welcome Back</h2>
-            <p>Sign in to access your private space</p>
+            <h2>
+              {isForgotPass ? 'Reset Password' : isRegistering ? 'Create Account' : 'Welcome Back'}
+            </h2>
+            <p>
+              {isForgotPass 
+                ? 'Enter your email to reset password' 
+                : isRegistering 
+                ? 'Sign up for a new account' 
+                : 'Sign in to access your private space'}
+            </p>
           </div>
 
           {user ? (
             <div className="success-message" style={{ textAlign: 'center' }}>
-              <h3>Welcome, {user.email}!</h3>
-              <p>You have successfully logged in to your Vault.</p>
+              <h3>مرحباً بك، {user.email}!</h3>
+              <p>تم تسجيل الدخول بنجاح إلى حسابك.</p>
             </div>
           ) : (
-            <form className="login-form" onSubmit={handleLogin}>
-              {error && <p style={{ color: '#ef4444', fontSize: '13px', textAlign: 'center' }}>{error}</p>}
-              
+            <form className="login-form" onSubmit={handleSubmit}>
+              {error && <p className="error-text">{error}</p>}
+              {message && <p className="success-text">{message}</p>}
+
               <div className="input-group">
-                <label>Username / Email</label>
+                <label>Email or Phone Number</label>
                 <div className="input-wrapper">
                   <span className="icon">👤</span>
                   <input 
                     type="text" 
-                    placeholder="Enter your username or email" 
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Enter email or phone" 
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
                     required
                   />
                 </div>
               </div>
 
-              <div className="input-group">
-                <label>Password</label>
-                <div className="input-wrapper">
-                  <span className="icon">🔒</span>
-                  <input 
-                    type="password" 
-                    placeholder="••••••••••••" 
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
+              {!isForgotPass && (
+                <div className="input-group">
+                  <label>Password</label>
+                  <div className="input-wrapper">
+                    <span className="icon">🔒</span>
+                    <input 
+                      type="password" 
+                      placeholder="••••••••••••" 
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {isRegistering && (
+                <div className="input-group">
+                  <label>Confirm Password</label>
+                  <div className="input-wrapper">
+                    <span className="icon">🔒</span>
+                    <input 
+                      type="password" 
+                      placeholder="••••••••••••" 
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+              )}
 
               <button type="submit" className="login-btn">
-                Login to Vault
+                {isForgotPass ? 'Send Reset Link' : isRegistering ? 'Sign Up' : 'Login to Vault'}
               </button>
+
+              <div className="form-actions">
+                {!isForgotPass ? (
+                  <>
+                    <span 
+                      className="link-text" 
+                      onClick={() => { setIsRegistering(!isRegistering); setError(''); }}
+                    >
+                      {isRegistering ? 'Already have an account? Login' : "Don't have an account? Sign Up"}
+                    </span>
+                    <span 
+                      className="link-text forgot-link" 
+                      onClick={() => { setIsForgotPass(true); setError(''); }}
+                    >
+                      Forgot Password?
+                    </span>
+                  </>
+                ) : (
+                  <span 
+                    className="link-text" 
+                    onClick={() => { setIsForgotPass(false); setError(''); }}
+                  >
+                    Back to Login
+                  </span>
+                )}
+              </div>
             </form>
           )}
         </div>
