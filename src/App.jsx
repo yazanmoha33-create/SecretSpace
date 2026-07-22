@@ -1,152 +1,178 @@
 import React, { useState } from 'react';
-import { 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  sendPasswordResetEmail,
-  signOut
-} from 'firebase/auth';
-import { auth } from './firebase';
 import './App.css';
 
-export default function App() {
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [isRegistering, setIsRegistering] = useState(false);
-  const [isForgotPass, setIsForgotPass] = useState(false);
-
-  const [identifier, setIdentifier] = useState('');
+function App() {
+  // حالة الثيم (light / dark للخلفية العامة)
+  const [theme, setTheme] = useState('light');
+  
+  // حالة تسجيل الدخول (نظام اسم المستخدم وكلمة المرور)
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
-  const [message, setMessage] = useState('');
-  const [user, setUser] = useState(null);
+  const [loginError, setLoginError] = useState('');
 
-  const [images, setImages] = useState([]);
+  // تبويبات الخزنة الداخلية والمعرض
+  const [activeTab, setActiveTab] = useState('gallery'); // 'gallery' أو 'trash'
+  const [selectedCategory, setSelectedCategory] = useState('الكل');
+
+  // مصفوفة الصور التجريبية المضافة مع التصنيفات
+  const [images, setImages] = useState([
+    { id: 1, url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e', category: 'طبيعة' },
+    { id: 2, url: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05', category: 'مناظر' },
+    { id: 3, url: 'https://images.unsplash.com/photo-1426604966848-d7adacbd02bff', category: 'طبيعة' },
+    { id: 4, url: 'https://images.unsplash.com/photo-1519681393784-d120267933ba', category: 'مناظر' }
+  ]);
+
   const [trash, setTrash] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState('All');
-  const [currentView, setCurrentView] = useState('gallery');
 
-  const toggleTheme = () => setIsDarkMode(!isDarkMode);
-
-  const handleSubmit = async (e) => {
+  // معالجة تسجيل الدخول
+  const handleLogin = (e) => {
     e.preventDefault();
-    setError('');
-    setMessage('');
-
-    try {
-      if (isForgotPass) {
-        await sendPasswordResetEmail(auth, identifier);
-        setMessage('تم إرسال رابط استعادة كلمة المرور إلى بريدك الإلكتروني.');
-        return;
-      }
-
-      if (isRegistering) {
-        if (password !== confirmPassword) {
-          setError('كلمتا المرور غير متطابقتان. الرجاء التأكد منهما.');
-          return;
-        }
-        const userCredential = await createUserWithEmailAndPassword(auth, identifier, password);
-        setUser(userCredential.user);
-        return;
-      }
-
-      const userCredential = await signInWithEmailAndPassword(auth, identifier, password);
-      setUser(userCredential.user);
-
-    } catch (err) {
-      setError('حدث خطأ، يرجى التأكد من البيانات المدخلة.');
+    if (username.trim() === '' || password.trim() === '') {
+      setLoginError('يرجى إدخال اسم المستخدم وكلمة المرور');
+      return;
     }
+    setLoginError('');
+    setIsLoggedIn(true);
   };
 
+  // رفع صورة جديدة (تجريبي)
   const handleImageUpload = (e) => {
-    const files = Array.from(e.target.files);
-    const newImages = files.map(file => ({
-      id: Date.now() + Math.random(),
-      url: URL.createObjectURL(file),
-      category: selectedCategory === 'All' ? 'General' : selectedCategory
-    }));
-    setImages(prev => [...prev, ...newImages]);
-  };
-
-  const moveToTrash = (id) => {
-    const imageToDelete = images.find(img => img.id === id);
-    if (imageToDelete) {
-      setImages(prev => prev.filter(img => img.id !== id));
-      setTrash(prev => [...prev, imageToDelete]);
+    const file = e.target.files[0];
+    if (file) {
+      const newImg = {
+        id: Date.now(),
+        url: URL.createObjectURL(file),
+        category: selectedCategory === 'الكل' ? 'طبيعة' : selectedCategory
+      };
+      setImages([newImg, ...images]);
     }
   };
 
-  const restoreFromTrash = (id) => {
-    const imageToRestore = trash.find(img => img.id === id);
-    if (imageToRestore) {
-      setTrash(prev => prev.filter(img => img.id !== id));
-      setImages(prev => [...prev, imageToRestore]);
+  // نقل إلى سلة المحذوفات
+  const handleDeleteImage = (id) => {
+    const imgToDelete = images.find(img => img.id === id);
+    if (imgToDelete) {
+      setImages(images.filter(img => img.id !== id));
+      setTrash([imgToDelete, ...trash]);
     }
   };
 
-  const deletePermanently = (id) => {
-    setTrash(prev => prev.filter(img => img.id !== id));
+  // استعادة من سلة المحذوفات
+  const handleRestoreImage = (id) => {
+    const imgToRestore = trash.find(img => img.id === id);
+    if (imgToRestore) {
+      setTrash(trash.filter(img => img.id !== id));
+      setImages([imgToRestore, ...images]);
+    }
   };
 
-  const handleLogout = async () => {
-    await signOut(auth);
-    setUser(null);
-    setImages([]);
-    setTrash([]);
+  // حذف نهائي
+  const handlePermanentDelete = (id) => {
+    setTrash(trash.filter(img => img.id !== id));
   };
 
-  const filteredImages = selectedCategory === 'All' 
+  const toggleTheme = () => {
+    setTheme(theme === 'light' ? 'dark' : 'light');
+  };
+
+  const filteredImages = selectedCategory === 'الكل' 
     ? images 
     : images.filter(img => img.category === selectedCategory);
 
   return (
-    <div className={`app-container ${isDarkMode ? 'dark' : 'light'}`}>
+    <div className={`app-container ${theme}`}>
+      {/* شريط الإعدادات العلوي */}
       <div className="top-bar-settings">
-        <button className="theme-toggle-btn" onClick={toggleTheme}>
-          {isDarkMode ? 'Light Mode ☀️' : 'Dark Mode 🌙'}
+        <button onClick={toggleTheme} className="theme-toggle-btn">
+          {theme === 'light' ? '🌙 الوضع الداكن' : '☀️ الوضع الفاتح'}
         </button>
       </div>
 
-      <div className={`main-layout ${user ? 'expanded-layout' : ''}`}>
-        {!user && (
-          <div className="hero-section">
-            <div className="logo-area">
-              <span className="logo-text">SecretSpace</span>
-              <span className="logo-icon">🔒</span>
-            </div>
-            <h1>Your space. Your media. <span className="highlight-text">Your privacy</span></h1>
-            <p>Secure storage for your private photos and videos with absolute safety</p>
+      <div className={`main-layout ${isLoggedIn ? 'expanded-layout' : ''}`}>
+        {/* القسم الترحيبي */}
+        <div className="hero-section">
+          <div className="logo-area">
+            <span className="logo-icon">🔒</span>
+            <span className="logo-text">خزنة الصور</span>
           </div>
-        )}
+          <h1>مرحباً بك في <span className="highlight-text">نظام الأمان</span></h1>
+          <p>قم بإدارة صورك الخاصة بكل أمان وسهولة بداخل بيئة عمل متطورة</p>
+        </div>
 
-        <div className={`login-card ${user ? 'vault-card-wide' : ''}`}>
-          {user ? (
+        {/* البطاقة الرئيسية (تسجيل الدخول أو لوحة الخزنة) */}
+        <div className={`login-card ${isLoggedIn ? 'vault-card-wide' : ''}`}>
+          {!isLoggedIn ? (
+            /* نموذج تسجيل الدخول (اسم المستخدم وكلمة المرور فقط) */
+            <div className="animate-fade">
+              <div className="login-header">
+                <h2>تسجيل الدخول</h2>
+                <p>أدخل بيانات الحساب للوصول إلى الخزنة</p>
+              </div>
+
+              <form onSubmit={handleLogin} className="login-form">
+                {loginError && <p className="error-text">{loginError}</p>}
+                
+                <div className="input-group">
+                  <label>اسم المستخدم</label>
+                  <div className="input-wrapper">
+                    <span className="icon">👤</span>
+                    <input 
+                      type="text" 
+                      placeholder="أدخل اسم المستخدم"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="input-group">
+                  <label>كلمة المرور</label>
+                  <div className="input-wrapper">
+                    <span className="icon">🔑</span>
+                    <input 
+                      type="password" 
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <button type="submit" className="login-btn">دخول إلى الخزنة</button>
+              </form>
+            </div>
+          ) : (
+            /* لوحة الخزنة وإدارة الصور */
             <div className="vault-container">
               <div className="vault-header">
-                <h2>Your Secure Vault</h2>
-                <p className="vault-user-email">Logged in as: {user.email}</p>
+                <h2>خزنة الصور الخاصة</h2>
+                <p className="vault-user-email">المستخدم: {username}</p>
               </div>
 
+              {/* تبويبات التنقل */}
               <div className="vault-nav-tabs">
                 <button 
-                  className={`tab-btn ${currentView === 'gallery' ? 'active' : ''}`}
-                  onClick={() => setCurrentView('gallery')}
+                  className={`tab-btn ${activeTab === 'gallery' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('gallery')}
                 >
-                  📁 Gallery
+                  📁 المعرض ({images.length})
                 </button>
                 <button 
-                  className={`tab-btn ${currentView === 'trash' ? 'active' : ''}`}
-                  onClick={() => setCurrentView('trash')}
+                  className={`tab-btn ${activeTab === 'trash' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('trash')}
                 >
-                  🗑️ Trash ({trash.length})
+                  🗑️ المحذوفات ({trash.length})
                 </button>
               </div>
 
-              {currentView === 'gallery' ? (
+              {activeTab === 'gallery' && (
                 <>
+                  {/* شريط التصنيفات */}
                   <div className="categories-bar">
-                    {['All', 'Family', 'Work', 'Personal', 'General'].map(cat => (
+                    {['الكل', 'طبيعة', 'مناظر'].map(cat => (
                       <button 
-                        key={cat} 
+                        key={cat}
                         className={`cat-pill ${selectedCategory === cat ? 'active' : ''}`}
                         onClick={() => setSelectedCategory(cat)}
                       >
@@ -155,162 +181,69 @@ export default function App() {
                     ))}
                   </div>
 
+                  {/* زر رفع صورة */}
                   <div className="upload-section">
-                    <label htmlFor="file-upload" className="upload-btn">
-                      ➕ Upload to [{selectedCategory}]
+                    <label className="upload-btn">
+                      ➕ رفع صورة جديدة
+                      <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
                     </label>
-                    <input 
-                      id="file-upload" 
-                      type="file" 
-                      multiple 
-                      accept="image/*" 
-                      onChange={handleImageUpload} 
-                      style={{ display: 'none' }}
-                    />
                   </div>
 
+                  {/* شبكة عرض الصور */}
                   <div className="gallery-grid-full">
-                    {filteredImages.length === 0 ? (
-                      <p className="no-images-text">No media in this category yet. Upload your private photos!</p>
-                    ) : (
+                    {filteredImages.length > 0 ? (
                       filteredImages.map(img => (
-                        <div key={img.id} className="image-card-full animate-fade">
+                        <div key={img.id} className="image-card-full">
                           <img src={img.url} alt="Vault item" />
                           <span className="img-badge">{img.category}</span>
-                          <button className="delete-icon-btn" onClick={() => moveToTrash(img.id)} title="Delete">❌</button>
+                          <button 
+                            className="delete-icon-btn"
+                            onClick={() => handleDeleteImage(img.id)}
+                            title="حذف"
+                          >
+                            ❌
+                          </button>
                         </div>
                       ))
+                    ) : (
+                      <p className="no-images-text">لا توجد صور مضافة في هذا القسم حالياً.</p>
                     )}
                   </div>
                 </>
-              ) : (
-                <div className="trash-section">
-                  <h3>Recycle Bin</h3>
-                  <div className="gallery-grid-full">
-                    {trash.length === 0 ? (
-                      <p className="no-images-text">Trash is empty.</p>
-                    ) : (
-                      trash.map(img => (
-                        <div key={img.id} className="image-card-full trash-item animate-fade">
-                          <img src={img.url} alt="Deleted item" />
-                          <div className="trash-actions">
-                            <button onClick={() => restoreFromTrash(img.id)} className="restore-btn">Restore</button>
-                            <button onClick={() => deletePermanently(img.id)} className="perm-delete-btn">Delete</button>
-                          </div>
+              )}
+
+              {activeTab === 'trash' && (
+                <div className="gallery-grid-full">
+                  {trash.length > 0 ? (
+                    trash.map(img => (
+                      <div key={img.id} className="image-card-full">
+                        <img src={img.url} alt="Deleted item" style={{ opacity: 0.6 }} />
+                        <div className="trash-actions">
+                          <button className="restore-btn" onClick={() => handleRestoreImage(img.id)}>استعادة</button>
+                          <button className="perm-delete-btn" onClick={() => handlePermanentDelete(img.id)}>حذف نهائي</button>
                         </div>
-                      ))
-                    )}
-                  </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="no-images-text">سلة المحذوفات فارغة.</p>
+                  )}
                 </div>
               )}
 
-              <button onClick={handleLogout} className="logout-btn">
-                Sign Out
+              <button className="logout-btn" onClick={() => setIsLoggedIn(false)}>
+                🚪 تسجيل الخروج
               </button>
             </div>
-          ) : (
-            <>
-              <div className="login-header">
-                <h2>
-                  {isForgotPass ? 'Reset Password' : isRegistering ? 'Create Account' : 'Welcome Back'}
-                </h2>
-                <p>
-                  {isForgotPass 
-                    ? 'Enter your email to reset password' 
-                    : isRegistering 
-                    ? 'Sign up for a new account' 
-                    : 'Sign in to access your private space'}
-                </p>
-              </div>
-
-              <form className="login-form" onSubmit={handleSubmit}>
-                {error && <p className="error-text">{error}</p>}
-                {message && <p className="success-text">{message}</p>}
-
-                <div className="input-group">
-                  <label>Email or Phone Number</label>
-                  <div className="input-wrapper">
-                    <span className="icon">👤</span>
-                    <input 
-                      type="text" 
-                      placeholder="Enter email or phone" 
-                      value={identifier}
-                      onChange={(e) => setIdentifier(e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
-
-                {!isForgotPass && (
-                  <div className="input-group">
-                    <label>Password</label>
-                    <div className="input-wrapper">
-                      <span className="icon">🔒</span>
-                      <input 
-                        type="password" 
-                        placeholder="••••••••••••" 
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                      />
-                    </div>
-                    {!isRegistering && (
-                      <span 
-                        className="link-text forgot-link-inline" 
-                        onClick={() => { setIsForgotPass(true); setError(''); }}
-                      >
-                        Forgot Password?
-                      </span>
-                    )}
-                  </div>
-                )}
-
-                {isRegistering && (
-                  <div className="input-group">
-                    <label>Confirm Password</label>
-                    <div className="input-wrapper">
-                      <span className="icon">🔒</span>
-                      <input 
-                        type="password" 
-                        placeholder="••••••••••••" 
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        required
-                      />
-                    </div>
-                  </div>
-                )}
-
-                <button type="submit" className="login-btn">
-                  {isForgotPass ? 'Send Reset Link' : isRegistering ? 'Sign Up' : 'Login to Vault'}
-                </button>
-
-                <div className="form-actions-bottom">
-                  {!isForgotPass ? (
-                    <span 
-                      className="link-text" 
-                      onClick={() => { setIsRegistering(!isRegistering); setError(''); }}
-                    >
-                      {isRegistering ? 'Already have an account? Login' : "Don't have an account? Sign Up"}
-                    </span>
-                  ) : (
-                    <span 
-                      className="link-text" 
-                      onClick={() => { setIsForgotPass(false); setError(''); }}
-                    >
-                      Back to Login
-                    </span>
-                  )}
-                </div>
-              </form>
-            </>
           )}
         </div>
       </div>
 
       <footer className="footer-copyright">
-        ©SecretSpace. All rights reserved 2026
+        جميع الحقوق محفوظة © 2026 - نظام خزنة الصور
       </footer>
     </div>
   );
 }
+
+App.jsx;
+export default App;
