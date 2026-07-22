@@ -7,7 +7,7 @@
   font-family: 'Inter', sans-serif;
 }
 
-/* خلفية الصفحة أصبحت ثابتة ونظيفة تماماً كما طلبت */
+/* الخلفية الكبيرة للصفحة هي التي تأخذ التدرج الغامق المتحرك واللمعة */
 .app-container {
   min-height: 100vh;
   display: flex;
@@ -17,17 +17,26 @@
   padding: 20px;
   position: relative;
   overflow-x: hidden;
+  background-size: 300% 300%;
   transition: color 0.4s ease;
 }
 
 .app-container.light {
-  background-color: #f3f4f6;
-  color: #1f2937;
+  background: linear-gradient(120deg, #023859, #0369a1, #021e30, #1e1b4b);
+  animation: gradientShift 14s ease infinite;
+  color: #ffffff;
 }
 
 .app-container.dark {
-  background-color: #0b0f19;
+  background: linear-gradient(120deg, #030712, #0f172a, #1e1b4b, #020617);
+  animation: gradientShift 14s ease infinite;
   color: #f1f1f1;
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 .top-bar-settings {
@@ -40,22 +49,19 @@
 }
 
 .theme-toggle-btn {
-  background: rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(0, 0, 0, 0.15);
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   padding: 8px 16px;
   border-radius: 20px;
+  color: white;
   font-weight: 600;
   cursor: pointer;
+  backdrop-filter: blur(8px);
   transition: all 0.3s ease;
 }
 
-.dark .theme-toggle-btn {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
-  color: white;
-}
-
 .theme-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.35);
   transform: scale(1.05);
 }
 
@@ -91,6 +97,7 @@
 .logo-text {
   font-size: 24px;
   font-weight: 700;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }
 
 .logo-icon {
@@ -102,67 +109,39 @@
   font-weight: 800;
   margin-bottom: 8px;
   line-height: 1.2;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }
 
 .highlight-text {
-  color: #0369a1;
-}
-
-.dark .highlight-text {
-  color: #38bdf8;
+  color: #7dd3fc;
 }
 
 .hero-section p {
   font-size: 14px;
-  opacity: 0.8;
+  opacity: 0.95;
 }
 
-/* هنا يتم تطبيق الألوان الغامقة واللمعة المتحركة (Shimmer) على البطاقة فقط */
+/* بطاقة الدخول والخزنة تصبح نظيفة ومرتبة (بفتحة خلفية ناعمة تبرز فوق الخلفية الغامقة) */
 .login-card {
   width: 100%;
-  background: linear-gradient(135deg, #033454, #022338, #071321);
-  background-size: 300% 300%;
-  animation: cardGradientShift 10s ease infinite;
-  color: #ffffff;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(16px);
+  color: #1f2937;
   padding: 35px 25px;
   border-radius: 24px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 25px rgba(2, 132, 199, 0.25);
-  border: 1.5px solid rgba(56, 189, 248, 0.4);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+  border: 1.5px solid rgba(255, 255, 255, 0.8);
   position: relative;
   overflow: hidden;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  animation-name: cardGradientShift, fadeInUp;
-  animation-duration: 10s, 0.6s;
-  animation-iteration-count: infinite, 1;
+  animation: fadeInUp 0.6s ease;
 }
 
-@keyframes cardGradientShift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-.login-card::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: linear-gradient(
-    60deg,
-    transparent,
-    rgba(255, 255, 255, 0.2),
-    transparent
-  );
-  transform: rotate(30deg);
-  animation: shimmerEffect 4.5s linear infinite;
-  pointer-events: none;
-}
-
-@keyframes shimmerEffect {
-  0% { transform: translateY(-100%) rotate(30deg); }
-  100% { transform: translateY(100%) rotate(30deg); }
+.dark .login-card {
+  background: rgba(15, 23, 42, 0.92);
+  color: #f1f1f1;
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.7);
 }
 
 .login-card.vault-card-wide {
@@ -178,11 +157,14 @@
   font-size: 26px;
   font-weight: 700;
   margin-bottom: 6px;
-  color: #ffffff;
 }
 
 .login-header p {
   font-size: 13px;
+  color: #6b7280;
+}
+
+.dark .login-header p {
   color: #94a3b8;
 }
 
@@ -202,22 +184,31 @@
 .input-group label {
   font-size: 12px;
   font-weight: 600;
+  color: #374151;
+}
+
+.dark .input-group label {
   color: #cbd5e1;
 }
 
 .input-wrapper {
   display: flex;
   align-items: center;
-  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  border: 1.5px solid #d1d5db;
   border-radius: 12px;
   padding: 0 12px;
-  background: rgba(15, 23, 42, 0.6);
+  background: #f9fafb;
   transition: all 0.3s ease;
 }
 
 .input-wrapper:focus-within {
-  border-color: #38bdf8;
-  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.25);
+  border-color: #0284c7;
+  box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.15);
+}
+
+.dark .input-wrapper {
+  border-color: #475569;
+  background: #020617;
 }
 
 .icon {
@@ -232,11 +223,7 @@
   font-size: 14px;
   outline: none;
   background: transparent;
-  color: #ffffff;
-}
-
-.input-wrapper input::placeholder {
-  color: #64748b;
+  color: inherit;
 }
 
 .login-btn {
@@ -250,7 +237,7 @@
   cursor: pointer;
   transition: all 0.2s ease;
   margin-top: 8px;
-  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4);
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
 }
 
 .login-btn:hover {
@@ -272,7 +259,7 @@
 }
 
 .link-text {
-  color: #38bdf8;
+  color: #0284c7;
   cursor: pointer;
   font-weight: 600;
   transition: opacity 0.2s;
@@ -283,15 +270,19 @@
   opacity: 0.8;
 }
 
+.dark .link-text {
+  color: #38bdf8;
+}
+
 .error-text {
-  color: #f87171;
+  color: #ef4444;
   font-size: 12px;
   text-align: center;
   margin: 0;
 }
 
 .success-text {
-  color: #4ade80;
+  color: #22c55e;
   font-size: 12px;
   text-align: center;
   margin: 0;
@@ -311,9 +302,13 @@
 
 .vault-user-email {
   font-size: 13px;
-  color: #38bdf8;
+  color: #0284c7;
   font-weight: 600;
   margin-top: 4px;
+}
+
+.dark .vault-user-email {
+  color: #38bdf8;
 }
 
 .vault-nav-tabs {
@@ -326,17 +321,21 @@
   flex: 1;
   padding: 10px;
   border-radius: 10px;
-  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  border: 1.5px solid #d1d5db;
   background: transparent;
-  color: #ffffff;
+  color: inherit;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
+.dark .tab-btn {
+  border-color: #475569;
+}
+
 .tab-btn:hover {
-  border-color: #38bdf8;
+  border-color: #0284c7;
 }
 
 .tab-btn.active {
@@ -355,18 +354,22 @@
 .cat-pill {
   padding: 6px 14px;
   border-radius: 20px;
-  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  border: 1.5px solid #cbd5e1;
   background: transparent;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  color: #ffffff;
+  color: inherit;
   white-space: nowrap;
   transition: all 0.2s ease;
 }
 
+.dark .cat-pill {
+  border-color: #475569;
+}
+
 .cat-pill:hover {
-  background: rgba(2, 132, 199, 0.2);
+  background: rgba(2, 132, 199, 0.1);
 }
 
 .cat-pill.active {
@@ -404,8 +407,12 @@
   max-height: 400px;
   overflow-y: auto;
   padding: 12px;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.04);
   border-radius: 16px;
+}
+
+.dark .gallery-grid-full {
+  background: rgba(0, 0, 0, 0.2);
 }
 
 .image-card-full {
@@ -414,7 +421,7 @@
   overflow: hidden;
   height: 130px;
   background: #000;
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
   transition: transform 0.3s ease;
 }
 
@@ -491,8 +498,12 @@
   grid-column: span 4;
   text-align: center;
   font-size: 14px;
-  color: #94a3b8;
+  color: #6b7280;
   padding: 50px 20px;
+}
+
+.dark .no-images-text {
+  color: #94a3b8;
 }
 
 .logout-btn {
@@ -514,11 +525,13 @@
 
 .footer-copyright {
   font-size: 12px;
-  opacity: 0.7;
+  opacity: 0.85;
   margin-top: 20px;
+  color: white;
+  z-index: 10;
 }
 
-/* الأنيميشن */
+/* الحركات */
 @keyframes fadeIn {
   from { opacity: 0; transform: scale(0.97); }
   to { opacity: 1; transform: scale(1); }
