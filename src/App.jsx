@@ -12,7 +12,7 @@ export default function App() {
   const [isRegistering, setIsRegistering] = useState(false);
   const [isForgotPass, setIsForgotPass] = useState(false);
 
-  const [identifier, setIdentifier] = useState(''); // البريد أو رقم الهاتف
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
@@ -21,21 +21,18 @@ export default function App() {
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
-  // دالة تسجيل الدخول أو إنشاء حساب أو استعادة الباسورد
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setMessage('');
 
     try {
-      // 1. حالة استعادة كلمة المرور
       if (isForgotPass) {
         await sendPasswordResetEmail(auth, identifier);
         setMessage('تم إرسال رابط استعادة كلمة المرور إلى بريدك الإلكتروني.');
         return;
       }
 
-      // 2. حالة إنشاء حساب جديد
       if (isRegistering) {
         if (password !== confirmPassword) {
           setError('كلمتا المرور غير متطابقتان. الرجاء التأكد منهما.');
@@ -46,7 +43,6 @@ export default function App() {
         return;
       }
 
-      // 3. حالة تسجيل الدخول العادية
       const userCredential = await signInWithEmailAndPassword(auth, identifier, password);
       setUser(userCredential.user);
 
@@ -124,6 +120,15 @@ export default function App() {
                       required
                     />
                   </div>
+                  {/* رابط نسيت كلمة المرور أصبح تحت خانة إدخال الباسورد */}
+                  {!isRegistering && (
+                    <span 
+                      className="link-text forgot-link-inline" 
+                      onClick={() => { setIsForgotPass(true); setError(''); }}
+                    >
+                      Forgot Password?
+                    </span>
+                  )}
                 </div>
               )}
 
@@ -147,22 +152,15 @@ export default function App() {
                 {isForgotPass ? 'Send Reset Link' : isRegistering ? 'Sign Up' : 'Login to Vault'}
               </button>
 
-              <div className="form-actions">
+              {/* رابط إنشاء وحساب جديد أصبح تحت زر الـ Login تماماً */}
+              <div className="form-actions-bottom">
                 {!isForgotPass ? (
-                  <>
-                    <span 
-                      className="link-text" 
-                      onClick={() => { setIsRegistering(!isRegistering); setError(''); }}
-                    >
-                      {isRegistering ? 'Already have an account? Login' : "Don't have an account? Sign Up"}
-                    </span>
-                    <span 
-                      className="link-text forgot-link" 
-                      onClick={() => { setIsForgotPass(true); setError(''); }}
-                    >
-                      Forgot Password?
-                    </span>
-                  </>
+                  <span 
+                    className="link-text" 
+                    onClick={() => { setIsRegistering(!isRegistering); setError(''); }}
+                  >
+                    {isRegistering ? 'Already have an account? Login' : "Don't have an account? Sign Up"}
+                  </span>
                 ) : (
                   <span 
                     className="link-text" 
