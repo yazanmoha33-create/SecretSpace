@@ -18,25 +18,41 @@ function App() {
   const [activeTab, setActiveTab] = useState('gallery'); // 'gallery', 'trash'
   const [selectedCategory, setSelectedCategory] = useState('All');
 
-  // استرجاع الصور والمحذوفات من الـ localStorage عند فتح الموقع لضمان عدم ضياعها عند الـ Refresh
+  // استرجاع الصور والمحذوفات من الـ localStorage
   const [images, setImages] = useState(() => {
-    const savedImages = localStorage.getItem('vault_images');
-    return savedImages ? JSON.parse(savedImages) : [];
+    try {
+      const savedImages = localStorage.getItem('vault_images');
+      return savedImages ? JSON.parse(savedImages) : [];
+    } catch (e) {
+      return [];
+    }
   });
 
   const [trash, setTrash] = useState(() => {
-    const savedTrash = localStorage.getItem('vault_trash');
-    return savedTrash ? JSON.parse(savedTrash) : [];
+    try {
+      const savedTrash = localStorage.getItem('vault_trash');
+      return savedTrash ? JSON.parse(savedTrash) : [];
+    } catch (e) {
+      return [];
+    }
   });
 
-  // حفظ الصور تلقائياً في الـ localStorage كلما تغيرت
+  // حفظ الصور في الـ localStorage بشكل دائم
   useEffect(() => {
-    localStorage.setItem('vault_images', JSON.stringify(images));
+    try {
+      localStorage.setItem('vault_images', JSON.stringify(images));
+    } catch (e) {
+      console.error('Storage limit reached or error saving images');
+    }
   }, [images]);
 
-  // حفظ المحذوفات تلقائياً في الـ localStorage
+  // حفظ المحذوفات في الـ localStorage
   useEffect(() => {
-    localStorage.setItem('vault_trash', JSON.stringify(trash));
+    try {
+      localStorage.setItem('vault_trash', JSON.stringify(trash));
+    } catch (e) {
+      console.error('Storage limit reached or error saving trash');
+    }
   }, [trash]);
 
   // Image Upload Preview States
@@ -81,19 +97,19 @@ function App() {
     setSuccessMsg('Password reset instructions sent to your identifier.');
   };
 
-  // Step 1: Select image and show preview (No auto-save)
+  // قراءة الصورة بصيغة Base64 لحفظها بشكل ثابت لا يضيع مع الـ Refresh
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setPreviewUrl(reader.result); // تحويل الصورة إلى Base64 لكي تخزن بثبات في الـ localStorage
+        setPreviewUrl(reader.result);
       };
       reader.readAsDataURL(file);
     }
   };
 
-  // Step 2: Click Save to save the image permanently to the gallery
+  // الضغط على Save لحفظ الصورة نهائياً في المعرض والـ localStorage
   const handleSaveImage = (e) => {
     e.preventDefault();
     if (!previewUrl) return;
