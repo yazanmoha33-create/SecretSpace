@@ -107,7 +107,7 @@ export default function App() {
       </div>
 
       <div className={`main-layout ${user ? 'expanded-layout' : ''}`}>
-        {/* القسم العلوي يظهر فقط إذا لم يتم تسجيل الدخول */}
+        {/* يختفي الشعار تماماً عند تسجيل الدخول لتأخذ الخزنة المساحة كاملة */}
         {!user && (
           <div className="hero-section">
             <div className="logo-area">
@@ -121,7 +121,7 @@ export default function App() {
 
         <div className={`login-card ${user ? 'vault-card-wide' : ''}`}>
           {user ? (
-            /* --- شاشة الخزنة الموسعة بكامل العرض --- */
+            /* --- شاشة الخزنة --- */
             <div className="vault-container">
               <div className="vault-header">
                 <h2>Your Secure Vault</h2>
@@ -176,7 +176,7 @@ export default function App() {
                       <p className="no-images-text">No media in this category yet. Upload your private photos!</p>
                     ) : (
                       filteredImages.map(img => (
-                        <div key={img.id} className="image-card-full">
+                        <div key={img.id} className="image-card-full animate-fade">
                           <img src={img.url} alt="Vault item" />
                           <span className="img-badge">{img.category}</span>
                           <button className="delete-icon-btn" onClick={() => moveToTrash(img.id)} title="Delete">❌</button>
@@ -193,7 +193,7 @@ export default function App() {
                       <p className="no-images-text">Trash is empty.</p>
                     ) : (
                       trash.map(img => (
-                        <div key={img.id} className="image-card-full trash-item">
+                        <div key={img.id} className="image-card-full trash-item animate-fade">
                           <img src={img.url} alt="Deleted item" />
                           <div className="trash-actions">
                             <button onClick={() => restoreFromTrash(img.id)} className="restore-btn">Restore</button>
@@ -211,7 +211,7 @@ export default function App() {
               </button>
             </div>
           ) : (
-            /* --- شاشة تسجيل الدخول العادية --- */
+            /* --- شاشة تسجيل الدخول --- */
             <>
               <div className="login-header">
                 <h2>
