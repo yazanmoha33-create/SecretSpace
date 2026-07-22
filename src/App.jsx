@@ -20,7 +20,6 @@ export default function App() {
   const [message, setMessage] = useState('');
   const [user, setUser] = useState(null);
 
-  // حالات الخزنة المتقدمة
   const [images, setImages] = useState([]);
   const [trash, setTrash] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -108,19 +107,21 @@ export default function App() {
       </div>
 
       <div className={`main-layout ${user ? 'expanded-layout' : ''}`}>
-        {/* القسم العلوي (الشعار والنص الترويجي يبقى ظاهراً في الحالتين كما طلبت) */}
-        <div className="hero-section">
-          <div className="logo-area">
-            <span className="logo-text">SecretSpace</span>
-            <span className="logo-icon">🔒</span>
+        {/* القسم العلوي يظهر فقط إذا لم يتم تسجيل الدخول */}
+        {!user && (
+          <div className="hero-section">
+            <div className="logo-area">
+              <span className="logo-text">SecretSpace</span>
+              <span className="logo-icon">🔒</span>
+            </div>
+            <h1>Your space. Your media. <span className="highlight-text">Your privacy</span></h1>
+            <p>Secure storage for your private photos and videos with absolute safety</p>
           </div>
-          <h1>Your space. Your media. <span className="highlight-text">Your privacy</span></h1>
-          <p>Secure storage for your private photos and videos with absolute safety</p>
-        </div>
+        )}
 
         <div className={`login-card ${user ? 'vault-card-wide' : ''}`}>
           {user ? (
-            /* --- شاشة الخزنة الموسعة --- */
+            /* --- شاشة الخزنة الموسعة بكامل العرض --- */
             <div className="vault-container">
               <div className="vault-header">
                 <h2>Your Secure Vault</h2>
