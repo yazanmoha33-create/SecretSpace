@@ -791,7 +791,7 @@ function App() {
                 </div>
               )}
 
-              {/* 6. SECURITY SETTINGS SCREEN (مع زر إظهار/إخفاء الباسورد والـ PIN) */}
+              {/* 6. SECURITY SETTINGS SCREEN */}
               {activeTab === 'security' && (
                 <div className="animate-fade" style={{ padding: '15px 0', textAlign: 'left' }}>
                   <h3 style={{ color: '#38bdf8', marginBottom: '15px' }}>Security Configuration</h3>
