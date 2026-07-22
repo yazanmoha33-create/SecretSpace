@@ -20,11 +20,11 @@ export default function App() {
   const [message, setMessage] = useState('');
   const [user, setUser] = useState(null);
 
-  // حالات الخزنة المتقدمة (الصور، المجموعات، سلة المحذوفات، والقسم النشط)
+  // حالات الخزنة المتقدمة
   const [images, setImages] = useState([]);
   const [trash, setTrash] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('All');
-  const [currentView, setCurrentView] = useState('gallery'); // 'gallery' or 'trash'
+  const [currentView, setCurrentView] = useState('gallery');
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
@@ -58,7 +58,6 @@ export default function App() {
     }
   };
 
-  // رفع الصور مع إمكانية تحديد المجموعة/الفئة
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
     const newImages = files.map(file => ({
@@ -69,7 +68,6 @@ export default function App() {
     setImages(prev => [...prev, ...newImages]);
   };
 
-  // نقل الصورة إلى سلة المحذوفات
   const moveToTrash = (id) => {
     const imageToDelete = images.find(img => img.id === id);
     if (imageToDelete) {
@@ -78,7 +76,6 @@ export default function App() {
     }
   };
 
-  // استرجاع الصورة من سلة المحذوفات
   const restoreFromTrash = (id) => {
     const imageToRestore = trash.find(img => img.id === id);
     if (imageToRestore) {
@@ -87,7 +84,6 @@ export default function App() {
     }
   };
 
-  // الحذف النهائي من السلة
   const deletePermanently = (id) => {
     setTrash(prev => prev.filter(img => img.id !== id));
   };
@@ -99,7 +95,6 @@ export default function App() {
     setTrash([]);
   };
 
-  // فلترة الصور حسب المجموعة المحددة
   const filteredImages = selectedCategory === 'All' 
     ? images 
     : images.filter(img => img.category === selectedCategory);
@@ -112,7 +107,8 @@ export default function App() {
         </button>
       </div>
 
-      <div className="main-layout">
+      <div className={`main-layout ${user ? 'expanded-layout' : ''}`}>
+        {/* القسم العلوي (الشعار والنص الترويجي يبقى ظاهراً في الحالتين كما طلبت) */}
         <div className="hero-section">
           <div className="logo-area">
             <span className="logo-text">SecretSpace</span>
@@ -122,16 +118,15 @@ export default function App() {
           <p>Secure storage for your private photos and videos with absolute safety</p>
         </div>
 
-        <div className="login-card">
+        <div className={`login-card ${user ? 'vault-card-wide' : ''}`}>
           {user ? (
-            /* --- الواجهة الداخلية بعد تسجيل الدخول (الخزنة وإدارة الصور) --- */
+            /* --- شاشة الخزنة الموسعة --- */
             <div className="vault-container">
               <div className="vault-header">
                 <h2>Your Secure Vault</h2>
-                <p className="vault-user-email">{user.email}</p>
+                <p className="vault-user-email">Logged in as: {user.email}</p>
               </div>
 
-              {/* شريط التنقل داخل الخزنة (المعرض / السلة) */}
               <div className="vault-nav-tabs">
                 <button 
                   className={`tab-btn ${currentView === 'gallery' ? 'active' : ''}`}
@@ -149,7 +144,6 @@ export default function App() {
 
               {currentView === 'gallery' ? (
                 <>
-                  {/* أزرار تخصيص المجموعات والفئات */}
                   <div className="categories-bar">
                     {['All', 'Family', 'Work', 'Personal', 'General'].map(cat => (
                       <button 
@@ -176,12 +170,12 @@ export default function App() {
                     />
                   </div>
 
-                  <div className="gallery-grid">
+                  <div className="gallery-grid-full">
                     {filteredImages.length === 0 ? (
-                      <p className="no-images-text">No media in this category yet.</p>
+                      <p className="no-images-text">No media in this category yet. Upload your private photos!</p>
                     ) : (
                       filteredImages.map(img => (
-                        <div key={img.id} className="image-card">
+                        <div key={img.id} className="image-card-full">
                           <img src={img.url} alt="Vault item" />
                           <span className="img-badge">{img.category}</span>
                           <button className="delete-icon-btn" onClick={() => moveToTrash(img.id)} title="Delete">❌</button>
@@ -191,15 +185,14 @@ export default function App() {
                   </div>
                 </>
               ) : (
-                /* --- شاشة سلة المحذوفات --- */
                 <div className="trash-section">
                   <h3>Recycle Bin</h3>
-                  <div className="gallery-grid">
+                  <div className="gallery-grid-full">
                     {trash.length === 0 ? (
                       <p className="no-images-text">Trash is empty.</p>
                     ) : (
                       trash.map(img => (
-                        <div key={img.id} className="image-card trash-item">
+                        <div key={img.id} className="image-card-full trash-item">
                           <img src={img.url} alt="Deleted item" />
                           <div className="trash-actions">
                             <button onClick={() => restoreFromTrash(img.id)} className="restore-btn">Restore</button>
@@ -217,7 +210,7 @@ export default function App() {
               </button>
             </div>
           ) : (
-            /* --- شاشة المصادقة وتسجيل الدخول --- */
+            /* --- شاشة تسجيل الدخول العادية --- */
             <>
               <div className="login-header">
                 <h2>
