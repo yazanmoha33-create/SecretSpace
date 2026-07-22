@@ -107,7 +107,6 @@ export default function App() {
       </div>
 
       <div className={`main-layout ${user ? 'expanded-layout' : ''}`}>
-        {/* يختفي الشعار تماماً عند تسجيل الدخول لتأخذ الخزنة المساحة كاملة */}
         {!user && (
           <div className="hero-section">
             <div className="logo-area">
@@ -121,7 +120,6 @@ export default function App() {
 
         <div className={`login-card ${user ? 'vault-card-wide' : ''}`}>
           {user ? (
-            /* --- شاشة الخزنة --- */
             <div className="vault-container">
               <div className="vault-header">
                 <h2>Your Secure Vault</h2>
@@ -211,7 +209,6 @@ export default function App() {
               </button>
             </div>
           ) : (
-            /* --- شاشة تسجيل الدخول --- */
             <>
               <div className="login-header">
                 <h2>
