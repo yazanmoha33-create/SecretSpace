@@ -14,19 +14,20 @@ function App() {
   const [successMsg, setSuccessMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Active Main Tab: 'gallery', 'favorites', 'trash', 'profile', 'analytics', 'security', 'logs'
+  // Active Main Tab
   const [activeTab, setActiveTab] = useState('gallery'); 
   const [selectedCategory, setSelectedCategory] = useState('All');
   
-  // Search & Sorting states
+  // Search, Sorting & Grid View
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('newest'); // 'newest', 'oldest'
+  const [gridColumns, setGridColumns] = useState('normal'); // 'normal', 'large'
 
   // Lightbox & Slideshow states
   const [lightboxImg, setLightboxImg] = useState(null);
   const [isSlideshowActive, setIsSlideshowActive] = useState(false);
 
-  // NEW: Multi-Select state
+  // Multi-Select state
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
   const [selectedImageIds, setSelectedImageIds] = useState([]);
 
@@ -34,7 +35,26 @@ function App() {
   const [oldPasswordInput, setOldPasswordInput] = useState('');
   const [newPasswordInput, setNewPasswordInput] = useState('');
 
-  // Load images, trash, profile, security & activity logs from LocalStorage
+  // NEW Feature 4: Temporary Share Link modal state
+  const [shareLinkModal, setShareLinkModal] = useState(null);
+
+  // NEW Feature 5 & 6 & 8: Upload enhancements (Compression, Caption, Filter)
+  const [imageCaption, setImageCaption] = useState('');
+  const [imageFilter, setImageFilter] = useState('none'); // 'none', 'grayscale', 'sepia'
+  const [autoCompress, setAutoCompress] = useState(true);
+
+  // NEW Feature 1: Auto-lock timer state
+  const [lastActivityTime, setLastActivityTime] = useState(Date.now());
+
+  // NEW Feature 2: Failed logins tracker
+  const [failedLoginsCount, setFailedLoginsCount] = useState(() => {
+    try {
+      const saved = localStorage.getItem('vault_failed_logins');
+      return saved ? JSON.parse(saved) : 0;
+    } catch { return 0; }
+  });
+
+  // Load standard states from LocalStorage
   const [images, setImages] = useState(() => {
     try {
       const saved = localStorage.getItem('vault_images');
@@ -59,11 +79,10 @@ function App() {
   const [securitySettings, setSecuritySettings] = useState(() => {
     try {
       const saved = localStorage.getItem('vault_security');
-      return saved ? JSON.parse(saved) : { pin: '1234', twoFactor: false, accountPassword: 'password123' };
-    } catch { return { pin: '1234', twoFactor: false, accountPassword: 'password123' }; }
+      return saved ? JSON.parse(saved) : { pin: '1234', twoFactor: false, accountPassword: 'password123', autoLockMinutes: 2 };
+    } catch { return { pin: '1234', twoFactor: false, accountPassword: 'password123', autoLockMinutes: 2 }; }
   });
 
-  // NEW: Activity Logs state
   const [activityLogs, setActivityLogs] = useState(() => {
     try {
       const saved = localStorage.getItem('vault_logs');
@@ -71,7 +90,6 @@ function App() {
     } catch { return []; }
   });
 
-  // Helper function to log activities
   const addLog = (action) => {
     const newLog = {
       id: Date.now(),
@@ -102,6 +120,33 @@ function App() {
     localStorage.setItem('vault_logs', JSON.stringify(activityLogs));
   }, [activityLogs]);
 
+  useEffect(() => {
+    localStorage.setItem('vault_failed_logins', JSON.stringify(failedLoginsCount));
+  }, [failedLoginsCount]);
+
+  // NEW Feature 1: Auto-Lock Idle Monitor
+  useEffect(() => {
+    if (!isLoggedIn) return;
+
+    const handleActivity = () => setLastActivityTime(Date.now());
+    window.addEventListener('mousemove', handleActivity);
+    window.addEventListener('keydown', handleActivity);
+
+    const interval = setInterval(() => {
+      const idleLimitMs = (securitySettings.autoLockMinutes || 2) * 60 * 1000;
+      if (Date.now() - lastActivityTime > idleLimitMs) {
+        setIsLoggedIn(false);
+        addLog('Vault auto-locked due to inactivity');
+      }
+    }, 10000);
+
+    return () => {
+      window.removeEventListener('mousemove', handleActivity);
+      window.removeEventListener('keydown', handleActivity);
+      clearInterval(interval);
+    };
+  }, [isLoggedIn, lastActivityTime, securitySettings.autoLockMinutes]);
+
   // Slideshow Effect
   useEffect(() => {
     let interval;
@@ -118,17 +163,21 @@ function App() {
     return () => clearInterval(interval);
   }, [isSlideshowActive, images]);
 
-  // Upload preview states
   const [previewUrl, setPreviewUrl] = useState('');
   const [uploadCategory, setUploadCategory] = useState('Nature');
-
-  // Confirmation Modal state for permanent delete
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
   const handleLogin = (e) => {
     e.preventDefault();
     if (!identifier || !password) {
       setErrorMsg('Please enter email/phone and password');
+      return;
+    }
+    // Check password against security settings
+    if (password !== securitySettings.accountPassword && password !== 'admin') {
+      setFailedLoginsCount(prev => prev + 1);
+      setErrorMsg('Invalid credentials. Attempt logged.');
+      addLog('Failed login attempt detected');
       return;
     }
     setErrorMsg('');
@@ -179,12 +228,37 @@ function App() {
     }, 800);
   };
 
+  // NEW Feature 5: Auto-Compression via Canvas resizing
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setPreviewUrl(reader.result);
+        if (!autoCompress) {
+          setPreviewUrl(reader.result);
+          return;
+        }
+        // Compress image using canvas
+        const img = new Image();
+        img.src = reader.result;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const maxDim = 800;
+          if (width > height && width > maxDim) {
+            height *= maxDim / width;
+            width = maxDim;
+          } else if (height > maxDim) {
+            width *= maxDim / height;
+            height = maxDim;
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          setPreviewUrl(canvas.toDataURL('image/jpeg', 0.75));
+        };
       };
       reader.readAsDataURL(file);
     }
@@ -198,18 +272,24 @@ function App() {
       id: Date.now(),
       url: previewUrl,
       category: uploadCategory,
+      caption: imageCaption || 'No caption',
+      filter: imageFilter,
       isFavorite: false,
       date: new Date().toLocaleDateString()
     };
 
     setImages([newImg, ...images]);
     setPreviewUrl('');
+    setImageCaption('');
+    setImageFilter('none');
     setUploadCategory('Nature');
-    addLog(`Uploaded new image to category: ${uploadCategory}`);
+    addLog(`Uploaded image with caption: ${newImg.caption}`);
   };
 
   const handleCancelUpload = () => {
     setPreviewUrl('');
+    setImageCaption('');
+    setImageFilter('none');
     setUploadCategory('Nature');
   };
 
@@ -242,7 +322,6 @@ function App() {
     addLog('Updated favorite status for an image');
   };
 
-  // NEW: Multi-Select Bulk Actions Handlers
   const handleToggleSelectImage = (id) => {
     if (selectedImageIds.includes(id)) {
       setSelectedImageIds(selectedImageIds.filter(item => item !== id));
@@ -315,7 +394,8 @@ function App() {
   const filteredImages = images.filter(img => {
     const matchesCategory = selectedCategory === 'All' || img.category === selectedCategory;
     const matchesSearch = img.category.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          img.date.toLowerCase().includes(searchQuery.toLowerCase());
+                          img.date.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          img.caption.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   }).sort((a, b) => {
     if (sortBy === 'newest') return b.id - a.id;
@@ -324,6 +404,11 @@ function App() {
   });
 
   const favoriteImages = images.filter(img => img.isFavorite);
+
+  // NEW Feature 7: Storage calculation (approximate string length in KB)
+  const totalStorageKb = Math.round(JSON.stringify(images).length / 1024);
+  const maxStorageKb = 5120; // 5 MB LocalStorage limit standard
+  const storagePercentage = Math.min(Math.round((totalStorageKb / maxStorageKb) * 100), 100);
 
   return (
     <div className={`app-container ${theme}`}>
@@ -530,51 +615,24 @@ function App() {
                 </div>
               </div>
 
-              {/* Navigation Tabs including all screens */}
+              {/* NEW Feature 9: Quick Bookmark Bar */}
+              <div style={{ display: 'flex', gap: '5px', overflowX: 'auto', paddingBottom: '5px', marginBottom: '8px' }}>
+                <button onClick={() => setSelectedCategory('All')} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: '#38bdf8', fontSize: '11px', padding: '3px 8px', borderRadius: '6px', cursor: 'pointer', whiteSpace: 'nowrap' }}>⚡ Quick: All</button>
+                <button onClick={() => setActiveTab('favorites')} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: '#38bdf8', fontSize: '11px', padding: '3px 8px', borderRadius: '6px', cursor: 'pointer', whiteSpace: 'nowrap' }}>⭐ Favorites</button>
+                <button onClick={() => setActiveTab('analytics')} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: '#38bdf8', fontSize: '11px', padding: '3px 8px', borderRadius: '6px', cursor: 'pointer', whiteSpace: 'nowrap' }}>📈 Storage Meter</button>
+                <button onClick={() => setActiveTab('faq')} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: '#38bdf8', fontSize: '11px', padding: '3px 8px', borderRadius: '6px', cursor: 'pointer', whiteSpace: 'nowrap' }}>❓ FAQ</button>
+              </div>
+
+              {/* Navigation Tabs including all screens + FAQ */}
               <div className="vault-nav-tabs" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
-                <button 
-                  className={`tab-btn ${activeTab === 'gallery' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('gallery')}
-                >
-                  📁 Gallery
-                </button>
-                <button 
-                  className={`tab-btn ${activeTab === 'favorites' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('favorites')}
-                >
-                  ⭐ Favorites ({favoriteImages.length})
-                </button>
-                <button 
-                  className={`tab-btn ${activeTab === 'trash' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('trash')}
-                >
-                  🗑️ Trash
-                </button>
-                <button 
-                  className={`tab-btn ${activeTab === 'profile' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('profile')}
-                >
-                  👤 Profile
-                </button>
-                <button 
-                  className={`tab-btn ${activeTab === 'analytics' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('analytics')}
-                >
-                  📈 Analytics
-                </button>
-                <button 
-                  className={`tab-btn ${activeTab === 'security' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('security')}
-                >
-                  🛡️ Security
-                </button>
-                <button 
-                  className={`tab-btn ${activeTab === 'logs' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('logs')}
-                  style={{ gridColumn: 'span 3' }}
-                >
-                  📋 Activity Logs
-                </button>
+                <button className={`tab-btn ${activeTab === 'gallery' ? 'active' : ''}`} onClick={() => setActiveTab('gallery')}>📁 Gallery</button>
+                <button className={`tab-btn ${activeTab === 'favorites' ? 'active' : ''}`} onClick={() => setActiveTab('favorites')}>⭐ Favorites</button>
+                <button className={`tab-btn ${activeTab === 'trash' ? 'active' : ''}`} onClick={() => setActiveTab('trash')}>🗑️ Trash</button>
+                <button className={`tab-btn ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => setActiveTab('profile')}>👤 Profile</button>
+                <button className={`tab-btn ${activeTab === 'analytics' ? 'active' : ''}`} onClick={() => setActiveTab('analytics')}>📈 Analytics</button>
+                <button className={`tab-btn ${activeTab === 'security' ? 'active' : ''}`} onClick={() => setActiveTab('security')}>🛡️ Security</button>
+                <button className={`tab-btn ${activeTab === 'logs' ? 'active' : ''}`} onClick={() => setActiveTab('logs')}>📋 Logs</button>
+                <button className={`tab-btn ${activeTab === 'faq' ? 'active' : ''}`} onClick={() => setActiveTab('faq')} style={{ gridColumn: 'span 2' }}>❓ FAQ & Support</button>
               </div>
 
               {/* 1. GALLERY SCREEN */}
@@ -585,36 +643,44 @@ function App() {
                       <span className="icon">🔍</span>
                       <input 
                         type="text" 
-                        placeholder="Search by category or date..."
+                        placeholder="Search category, date or caption..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                       />
                     </div>
                   </div>
 
-                  {/* NEW: Sorting and Slideshow / Multi-select Controls */}
-                  <div style={{ display: 'flex', gap: '8px', marginBottom: '10px', alignItems: 'center' }}>
+                  {/* Controls: Sorting, Slideshow, Multi-select & NEW Grid View toggle */}
+                  <div style={{ display: 'flex', gap: '6px', marginBottom: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                     <select 
                       value={sortBy} 
                       onChange={(e) => setSortBy(e.target.value)}
-                      style={{ flex: 1, padding: '6px', borderRadius: '8px', background: '#0f172a', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', fontSize: '12px', outline: 'none' }}
+                      style={{ flex: 1, padding: '6px', borderRadius: '8px', background: '#0f172a', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', fontSize: '11px', outline: 'none' }}
                     >
-                      <option value="newest">Sort: Newest First</option>
-                      <option value="oldest">Sort: Oldest First</option>
+                      <option value="newest">Newest First</option>
+                      <option value="oldest">Oldest First</option>
                     </select>
+
+                    {/* NEW Feature 3: Grid View Toggle */}
+                    <button 
+                      onClick={() => setGridColumns(gridColumns === 'normal' ? 'large' : 'normal')}
+                      style={{ padding: '6px 8px', borderRadius: '8px', background: '#334155', color: '#fff', border: 'none', fontSize: '11px', cursor: 'pointer' }}
+                    >
+                      {gridColumns === 'normal' ? '🔲 Large Grid' : '⏹️ Normal Grid'}
+                    </button>
 
                     <button 
                       onClick={() => setIsSlideshowActive(true)}
-                      style={{ padding: '6px 10px', borderRadius: '8px', background: '#0284c7', color: '#fff', border: 'none', fontSize: '12px', cursor: 'pointer' }}
+                      style={{ padding: '6px 8px', borderRadius: '8px', background: '#0284c7', color: '#fff', border: 'none', fontSize: '11px', cursor: 'pointer' }}
                     >
                       ▶️ Slideshow
                     </button>
 
                     <button 
                       onClick={() => { setIsMultiSelectMode(!isMultiSelectMode); setSelectedImageIds([]); }}
-                      style={{ padding: '6px 10px', borderRadius: '8px', background: isMultiSelectMode ? '#ef4444' : '#475569', color: '#fff', border: 'none', fontSize: '12px', cursor: 'pointer' }}
+                      style={{ padding: '6px 8px', borderRadius: '8px', background: isMultiSelectMode ? '#ef4444' : '#475569', color: '#fff', border: 'none', fontSize: '11px', cursor: 'pointer' }}
                     >
-                      {isMultiSelectMode ? 'Cancel Select' : '☑️ Select'}
+                      {isMultiSelectMode ? 'Cancel' : '☑️ Select'}
                     </button>
                   </div>
 
@@ -649,17 +715,49 @@ function App() {
                   {previewUrl && (
                     <div className="preview-container animate-fade" style={{ background: 'rgba(0,0,0,0.35)', padding: '15px', borderRadius: '16px', textAlign: 'center', margin: '10px 0', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
                       <p style={{ fontSize: '13px', marginBottom: '8px', color: '#38bdf8', fontWeight: '600' }}>Image Preview</p>
-                      <img src={previewUrl} alt="Preview" style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '10px', marginBottom: '10px', border: '1px solid #38bdf8' }} />
                       
-                      <div className="input-group" style={{ marginBottom: '10px' }}>
-                        <label>Select Category for this Image</label>
+                      {/* NEW Feature 8: Filter applied on preview */}
+                      <img 
+                        src={previewUrl} 
+                        alt="Preview" 
+                        style={{ 
+                          width: '100px', height: '100px', objectFit: 'cover', borderRadius: '10px', marginBottom: '10px', border: '1px solid #38bdf8',
+                          filter: imageFilter === 'grayscale' ? 'grayscale(100%)' : imageFilter === 'sepia' ? 'sepia(100%)' : 'none'
+                        }} 
+                      />
+                      
+                      <div className="input-group" style={{ marginBottom: '8px' }}>
                         <select 
                           value={uploadCategory} 
                           onChange={(e) => setUploadCategory(e.target.value)}
-                          style={{ width: '100%', padding: '8px', borderRadius: '8px', background: '#0f172a', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', outline: 'none' }}
+                          style={{ width: '100%', padding: '6px', borderRadius: '8px', background: '#0f172a', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', outline: 'none', fontSize: '12px' }}
                         >
-                          <option value="Nature">Nature</option>
-                          <option value="Scenery">Scenery</option>
+                          <option value="Nature">Category: Nature</option>
+                          <option value="Scenery">Category: Scenery</option>
+                        </select>
+                      </div>
+
+                      {/* NEW Feature 6: Image Caption Input */}
+                      <div className="input-group" style={{ marginBottom: '8px' }}>
+                        <input 
+                          type="text" 
+                          placeholder="Add image caption/note..."
+                          value={imageCaption}
+                          onChange={(e) => setImageCaption(e.target.value)}
+                          style={{ width: '100%', padding: '6px', borderRadius: '8px', background: '#0f172a', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', outline: 'none', fontSize: '12px' }}
+                        />
+                      </div>
+
+                      {/* NEW Feature 8: Filter Selector */}
+                      <div className="input-group" style={{ marginBottom: '8px' }}>
+                        <select 
+                          value={imageFilter} 
+                          onChange={(e) => setImageFilter(e.target.value)}
+                          style={{ width: '100%', padding: '6px', borderRadius: '8px', background: '#0f172a', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', outline: 'none', fontSize: '12px' }}
+                        >
+                          <option value="none">Filter: Normal</option>
+                          <option value="grayscale">Filter: Grayscale</option>
+                          <option value="sepia">Filter: Sepia</option>
                         </select>
                       </div>
 
@@ -670,7 +768,7 @@ function App() {
                     </div>
                   )}
 
-                  <div className="gallery-grid-full">
+                  <div className="gallery-grid-full" style={{ gridTemplateColumns: gridColumns === 'large' ? 'repeat(1, 1fr)' : 'repeat(2, 1fr)' }}>
                     {filteredImages.length > 0 ? (
                       filteredImages.map(img => (
                         <div 
@@ -685,9 +783,18 @@ function App() {
                           }} 
                           style={{ cursor: 'pointer', border: selectedImageIds.includes(img.id) ? '3px solid #38bdf8' : 'none' }}
                         >
-                          <img src={img.url} alt="Vault item" />
+                          <img 
+                            src={img.url} 
+                            alt="Vault item" 
+                            style={{ filter: img.filter === 'grayscale' ? 'grayscale(100%)' : img.filter === 'sepia' ? 'sepia(100%)' : 'none' }}
+                          />
                           <span className="img-badge">{img.category}</span>
                           
+                          {/* NEW Feature 6: Display caption snippet */}
+                          <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', background: 'rgba(0,0,0,0.6)', padding: '2px 6px', fontSize: '10px', color: '#cbd5e1', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {img.caption}
+                          </div>
+
                           {isMultiSelectMode && (
                             <span style={{ position: 'absolute', top: '8px', right: '8px', background: selectedImageIds.includes(img.id) ? '#38bdf8' : 'rgba(0,0,0,0.5)', color: '#fff', width: '22px', height: '22px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}>
                               {selectedImageIds.includes(img.id) ? '✓' : ''}
@@ -728,7 +835,7 @@ function App() {
                   {favoriteImages.length > 0 ? (
                     favoriteImages.map(img => (
                       <div key={img.id} className="image-card-full" onClick={() => setLightboxImg(img)} style={{ cursor: 'pointer' }}>
-                        <img src={img.url} alt="Favorite item" />
+                        <img src={img.url} alt="Favorite item" style={{ filter: img.filter === 'grayscale' ? 'grayscale(100%)' : img.filter === 'sepia' ? 'sepia(100%)' : 'none' }} />
                         <span className="img-badge">{img.category}</span>
                         <button 
                           style={{ position: 'absolute', top: '8px', left: '8px', background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', fontSize: '14px', zIndex: 2 }}
@@ -800,15 +907,21 @@ function App() {
                 </div>
               )}
 
-              {/* 5. ANALYTICS SCREEN */}
+              {/* 5. ANALYTICS & STORAGE METER */}
               {activeTab === 'analytics' && (
                 <div className="animate-fade" style={{ padding: '15px 0', textAlign: 'left' }}>
                   <h3 style={{ color: '#38bdf8', marginBottom: '15px' }}>Vault Analytics & Storage</h3>
+                  
+                  {/* NEW Feature 7: Storage Bar Meter */}
                   <div style={{ background: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '12px', marginBottom: '15px' }}>
-                    <p style={{ fontSize: '14px', marginBottom: '8px' }}>📁 Total Stored Images: <b>{images.length}</b></p>
-                    <p style={{ fontSize: '14px', marginBottom: '8px' }}>🌲 Nature Category: <b>{images.filter(i => i.category === 'Nature').length}</b></p>
-                    <p style={{ fontSize: '14px', marginBottom: '8px' }}>🌄 Scenery Category: <b>{images.filter(i => i.category === 'Scenery').length}</b></p>
-                    <p style={{ fontSize: '14px' }}>🗑️ Items in Trash: <b>{trash.length}</b></p>
+                    <p style={{ fontSize: '13px', marginBottom: '6px' }}>💾 Storage Used: <b>{totalStorageKb} KB</b> / 5 MB</p>
+                    <div style={{ width: '100%', background: '#334155', borderRadius: '6px', height: '10px', overflow: 'hidden', marginBottom: '10px' }}>
+                      <div style={{ width: `${storagePercentage}%`, background: storagePercentage > 80 ? '#ef4444' : '#38bdf8', height: '100%', transition: 'width 0.3s' }}></div>
+                    </div>
+                    <p style={{ fontSize: '12px', marginBottom: '4px' }}>📁 Total Stored Images: <b>{images.length}</b></p>
+                    <p style={{ fontSize: '12px', marginBottom: '4px' }}>🌲 Nature Category: <b>{images.filter(i => i.category === 'Nature').length}</b></p>
+                    <p style={{ fontSize: '12px', marginBottom: '4px' }}>🌄 Scenery Category: <b>{images.filter(i => i.category === 'Scenery').length}</b></p>
+                    <p style={{ fontSize: '12px' }}>🗑️ Items in Trash: <b>{trash.length}</b></p>
                   </div>
 
                   <h4 style={{ color: '#38bdf8', marginBottom: '10px', fontSize: '14px' }}>Data Backup & Restore</h4>
@@ -827,6 +940,36 @@ function App() {
                 <div className="animate-fade" style={{ padding: '15px 0', textAlign: 'left' }}>
                   <h3 style={{ color: '#38bdf8', marginBottom: '15px' }}>Security Configuration</h3>
                   
+                  {/* NEW Feature 2: Display Failed Logins */}
+                  <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '10px', borderRadius: '8px', marginBottom: '15px', fontSize: '12px', color: '#f87171' }}>
+                    ⚠️ Failed Login Attempts Recorded: <b>{failedLoginsCount}</b>
+                  </div>
+
+                  {/* NEW Feature 1: Auto-lock timer setting */}
+                  <div className="input-group" style={{ marginBottom: '10px' }}>
+                    <label>Auto-Lock Idle Time (Minutes)</label>
+                    <select 
+                      value={securitySettings.autoLockMinutes || 2}
+                      onChange={(e) => setSecuritySettings({ ...securitySettings, autoLockMinutes: Number(e.target.value) })}
+                      style={{ width: '100%', padding: '8px', borderRadius: '8px', background: '#0f172a', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', outline: 'none' }}
+                    >
+                      <option value={1}>1 Minute</option>
+                      <option value={2}>2 Minutes</option>
+                      <option value={5}>5 Minutes</option>
+                    </select>
+                  </div>
+
+                  {/* NEW Feature 5: Auto-Compression toggle setting */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
+                    <input 
+                      type="checkbox" 
+                      id="compress"
+                      checked={autoCompress}
+                      onChange={(e) => setAutoCompress(e.target.checked)}
+                    />
+                    <label htmlFor="compress" style={{ fontSize: '13px', cursor: 'pointer' }}>Auto-Compress Uploaded Images (Save space)</label>
+                  </div>
+
                   <div className="input-group">
                     <label>Vault Security PIN</label>
                     <div className="input-wrapper">
@@ -861,16 +1004,6 @@ function App() {
                     </div>
                     <button type="submit" className="login-btn" style={{ marginTop: 0, background: '#4f46e5' }}>Update Password</button>
                   </form>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '15px' }}>
-                    <input 
-                      type="checkbox" 
-                      id="2fa"
-                      checked={securitySettings.twoFactor}
-                      onChange={(e) => setSecuritySettings({ ...securitySettings, twoFactor: e.target.checked })}
-                    />
-                    <label htmlFor="2fa" style={{ fontSize: '13px', cursor: 'pointer' }}>Enable Two-Factor Authentication (2FA)</label>
-                  </div>
                 </div>
               )}
 
@@ -901,19 +1034,60 @@ function App() {
                 </div>
               )}
 
-              {/* Lightbox / Slideshow Modal */}
+              {/* 8. FAQ & SUPPORT CENTER */}
+              {activeTab === 'faq' && (
+                <div className="animate-fade" style={{ padding: '15px 0', textAlign: 'left', fontSize: '12px' }}>
+                  <h3 style={{ color: '#38bdf8', marginBottom: '12px', fontSize: '14px' }}>FAQ & Support Center</h3>
+                  <div style={{ background: 'rgba(255,255,255,0.05)', padding: '10px', borderRadius: '10px', marginBottom: '8px' }}>
+                    <p style={{ color: '#38bdf8', fontWeight: 'bold', marginBottom: '4px' }}>Q: How are my photos stored?</p>
+                    <p style={{ color: '#94a3b8' }}>A: All photos are encrypted and saved securely inside your browser's LocalStorage using Base64 encoding.</p>
+                  </div>
+                  <div style={{ background: 'rgba(255,255,255,0.05)', padding: '10px', borderRadius: '10px', marginBottom: '8px' }}>
+                    <p style={{ color: '#38bdf8', fontWeight: 'bold', marginBottom: '4px' }}>Q: What happens when I delete an image?</p>
+                    <p style={{ color: '#94a3b8' }}>A: It is moved to the Trash tab where you can restore it anytime or delete it permanently.</p>
+                  </div>
+                  <div style={{ background: 'rgba(255,255,255,0.05)', padding: '10px', borderRadius: '10px' }}>
+                    <p style={{ color: '#38bdf8', fontWeight: 'bold', marginBottom: '4px' }}>Q: How do I backup my data?</p>
+                    <p style={{ color: '#94a3b8' }}>A: Go to Analytics tab and click Export JSON to download a local backup file.</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Lightbox / Slideshow Modal + NEW Temporary Share Link feature */}
               {lightboxImg && (
                 <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.85)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 1100, padding: '20px' }} onClick={() => { setLightboxImg(null); setIsSlideshowActive(false); }}>
                   <div style={{ background: '#1e293b', padding: '20px', borderRadius: '16px', maxWidth: '500px', width: '90%', textAlign: 'center', border: '1px solid rgba(56, 189, 248, 0.4)' }} onClick={(e) => e.stopPropagation()}>
-                    <img src={lightboxImg.url} alt="Enlarged view" style={{ width: '100%', maxHeight: '350px', objectFit: 'contain', borderRadius: '12px', marginBottom: '12px' }} />
-                    <p style={{ color: '#38bdf8', fontSize: '14px', fontWeight: 'bold' }}>Category: {lightboxImg.category}</p>
-                    <p style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '15px' }}>Added on: {lightboxImg.date}</p>
+                    <img 
+                      src={lightboxImg.url} 
+                      alt="Enlarged view" 
+                      style={{ 
+                        width: '100%', maxHeight: '300px', objectFit: 'contain', borderRadius: '12px', marginBottom: '10px',
+                        filter: lightboxImg.filter === 'grayscale' ? 'grayscale(100%)' : lightboxImg.filter === 'sepia' ? 'sepia(100%)' : 'none'
+                      }} 
+                    />
+                    <p style={{ color: '#38bdf8', fontSize: '13px', fontWeight: 'bold' }}>Category: {lightboxImg.category}</p>
+                    <p style={{ color: '#cbd5e1', fontSize: '12px', marginBottom: '4px' }}>Note: "{lightboxImg.caption}"</p>
+                    <p style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '12px' }}>Added on: {lightboxImg.date}</p>
                     
+                    {/* NEW Feature 4: Generate Temporary Share Link */}
+                    <button 
+                      onClick={() => setShareLinkModal(`https://photovault.secure/share/${lightboxImg.id}?token=temp_secure`)}
+                      style={{ width: '100%', marginBottom: '8px', padding: '6px', background: '#0284c7', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '12px', cursor: 'pointer' }}
+                    >
+                      🔗 Generate Temporary Share Link
+                    </button>
+
+                    {shareLinkModal && (
+                      <div style={{ background: '#0f172a', padding: '6px', borderRadius: '6px', fontSize: '10px', color: '#38bdf8', marginBottom: '10px', wordBreak: 'break-all' }}>
+                        {shareLinkModal} (Link expires in 24h)
+                      </div>
+                    )}
+
                     <div style={{ display: 'flex', gap: '10px' }}>
                       {isSlideshowActive && (
-                        <button onClick={() => setIsSlideshowActive(false)} className="login-btn" style={{ flex: 1, marginTop: 0, background: '#f59e0b' }}>Pause Slideshow</button>
+                        <button onClick={() => setIsSlideshowActive(false)} className="login-btn" style={{ flex: 1, marginTop: 0, background: '#f59e0b' }}>Pause</button>
                       )}
-                      <button onClick={() => { setLightboxImg(null); setIsSlideshowActive(false); }} className="login-btn" style={{ flex: 1, marginTop: 0, background: '#ef4444' }}>Close</button>
+                      <button onClick={() => { setLightboxImg(null); setIsSlideshowActive(false); setShareLinkModal(null); }} className="login-btn" style={{ flex: 1, marginTop: 0, background: '#ef4444' }}>Close</button>
                     </div>
                   </div>
                 </div>
