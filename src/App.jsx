@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
-  sendPasswordResetEmail 
+  sendPasswordResetEmail,
+  signOut
 } from 'firebase/auth';
 import { auth } from './firebase';
 import './App.css';
@@ -18,6 +19,12 @@ export default function App() {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [user, setUser] = useState(null);
+
+  // حالات الخزنة المتقدمة (الصور، المجموعات، سلة المحذوفات، والقسم النشط)
+  const [images, setImages] = useState([]);
+  const [trash, setTrash] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [currentView, setCurrentView] = useState('gallery'); // 'gallery' or 'trash'
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
@@ -51,6 +58,52 @@ export default function App() {
     }
   };
 
+  // رفع الصور مع إمكانية تحديد المجموعة/الفئة
+  const handleImageUpload = (e) => {
+    const files = Array.from(e.target.files);
+    const newImages = files.map(file => ({
+      id: Date.now() + Math.random(),
+      url: URL.createObjectURL(file),
+      category: selectedCategory === 'All' ? 'General' : selectedCategory
+    }));
+    setImages(prev => [...prev, ...newImages]);
+  };
+
+  // نقل الصورة إلى سلة المحذوفات
+  const moveToTrash = (id) => {
+    const imageToDelete = images.find(img => img.id === id);
+    if (imageToDelete) {
+      setImages(prev => prev.filter(img => img.id !== id));
+      setTrash(prev => [...prev, imageToDelete]);
+    }
+  };
+
+  // استرجاع الصورة من سلة المحذوفات
+  const restoreFromTrash = (id) => {
+    const imageToRestore = trash.find(img => img.id === id);
+    if (imageToRestore) {
+      setTrash(prev => prev.filter(img => img.id !== id));
+      setImages(prev => [...prev, imageToRestore]);
+    }
+  };
+
+  // الحذف النهائي من السلة
+  const deletePermanently = (id) => {
+    setTrash(prev => prev.filter(img => img.id !== id));
+  };
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    setUser(null);
+    setImages([]);
+    setTrash([]);
+  };
+
+  // فلترة الصور حسب المجموعة المحددة
+  const filteredImages = selectedCategory === 'All' 
+    ? images 
+    : images.filter(img => img.category === selectedCategory);
+
   return (
     <div className={`app-container ${isDarkMode ? 'dark' : 'light'}`}>
       <div className="top-bar-settings">
@@ -70,107 +123,196 @@ export default function App() {
         </div>
 
         <div className="login-card">
-          <div className="login-header">
-            <h2>
-              {isForgotPass ? 'Reset Password' : isRegistering ? 'Create Account' : 'Welcome Back'}
-            </h2>
-            <p>
-              {isForgotPass 
-                ? 'Enter your email to reset password' 
-                : isRegistering 
-                ? 'Sign up for a new account' 
-                : 'Sign in to access your private space'}
-            </p>
-          </div>
-
           {user ? (
-            <div className="success-message" style={{ textAlign: 'center' }}>
-              <h3>مرحباً بك، {user.email}!</h3>
-              <p>تم تسجيل الدخول بنجاح إلى حسابك.</p>
-            </div>
-          ) : (
-            <form className="login-form" onSubmit={handleSubmit}>
-              {error && <p className="error-text">{error}</p>}
-              {message && <p className="success-text">{message}</p>}
-
-              <div className="input-group">
-                <label>Email or Phone Number</label>
-                <div className="input-wrapper">
-                  <span className="icon">👤</span>
-                  <input 
-                    type="text" 
-                    placeholder="Enter email or phone" 
-                    value={identifier}
-                    onChange={(e) => setIdentifier(e.target.value)}
-                    required
-                  />
-                </div>
+            /* --- الواجهة الداخلية بعد تسجيل الدخول (الخزنة وإدارة الصور) --- */
+            <div className="vault-container">
+              <div className="vault-header">
+                <h2>Your Secure Vault</h2>
+                <p className="vault-user-email">{user.email}</p>
               </div>
 
-              {!isForgotPass && (
-                <div className="input-group">
-                  <label>Password</label>
-                  <div className="input-wrapper">
-                    <span className="icon">🔒</span>
+              {/* شريط التنقل داخل الخزنة (المعرض / السلة) */}
+              <div className="vault-nav-tabs">
+                <button 
+                  className={`tab-btn ${currentView === 'gallery' ? 'active' : ''}`}
+                  onClick={() => setCurrentView('gallery')}
+                >
+                  📁 Gallery
+                </button>
+                <button 
+                  className={`tab-btn ${currentView === 'trash' ? 'active' : ''}`}
+                  onClick={() => setCurrentView('trash')}
+                >
+                  🗑️ Trash ({trash.length})
+                </button>
+              </div>
+
+              {currentView === 'gallery' ? (
+                <>
+                  {/* أزرار تخصيص المجموعات والفئات */}
+                  <div className="categories-bar">
+                    {['All', 'Family', 'Work', 'Personal', 'General'].map(cat => (
+                      <button 
+                        key={cat} 
+                        className={`cat-pill ${selectedCategory === cat ? 'active' : ''}`}
+                        onClick={() => setSelectedCategory(cat)}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="upload-section">
+                    <label htmlFor="file-upload" className="upload-btn">
+                      ➕ Upload to [{selectedCategory}]
+                    </label>
                     <input 
-                      type="password" 
-                      placeholder="••••••••••••" 
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      id="file-upload" 
+                      type="file" 
+                      multiple 
+                      accept="image/*" 
+                      onChange={handleImageUpload} 
+                      style={{ display: 'none' }}
+                    />
+                  </div>
+
+                  <div className="gallery-grid">
+                    {filteredImages.length === 0 ? (
+                      <p className="no-images-text">No media in this category yet.</p>
+                    ) : (
+                      filteredImages.map(img => (
+                        <div key={img.id} className="image-card">
+                          <img src={img.url} alt="Vault item" />
+                          <span className="img-badge">{img.category}</span>
+                          <button className="delete-icon-btn" onClick={() => moveToTrash(img.id)} title="Delete">❌</button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </>
+              ) : (
+                /* --- شاشة سلة المحذوفات --- */
+                <div className="trash-section">
+                  <h3>Recycle Bin</h3>
+                  <div className="gallery-grid">
+                    {trash.length === 0 ? (
+                      <p className="no-images-text">Trash is empty.</p>
+                    ) : (
+                      trash.map(img => (
+                        <div key={img.id} className="image-card trash-item">
+                          <img src={img.url} alt="Deleted item" />
+                          <div className="trash-actions">
+                            <button onClick={() => restoreFromTrash(img.id)} className="restore-btn">Restore</button>
+                            <button onClick={() => deletePermanently(img.id)} className="perm-delete-btn">Delete</button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <button onClick={handleLogout} className="logout-btn">
+                Sign Out
+              </button>
+            </div>
+          ) : (
+            /* --- شاشة المصادقة وتسجيل الدخول --- */
+            <>
+              <div className="login-header">
+                <h2>
+                  {isForgotPass ? 'Reset Password' : isRegistering ? 'Create Account' : 'Welcome Back'}
+                </h2>
+                <p>
+                  {isForgotPass 
+                    ? 'Enter your email to reset password' 
+                    : isRegistering 
+                    ? 'Sign up for a new account' 
+                    : 'Sign in to access your private space'}
+                </p>
+              </div>
+
+              <form className="login-form" onSubmit={handleSubmit}>
+                {error && <p className="error-text">{error}</p>}
+                {message && <p className="success-text">{message}</p>}
+
+                <div className="input-group">
+                  <label>Email or Phone Number</label>
+                  <div className="input-wrapper">
+                    <span className="icon">👤</span>
+                    <input 
+                      type="text" 
+                      placeholder="Enter email or phone" 
+                      value={identifier}
+                      onChange={(e) => setIdentifier(e.target.value)}
                       required
                     />
                   </div>
-                  {/* رابط نسيت كلمة المرور أصبح تحت خانة إدخال الباسورد */}
-                  {!isRegistering && (
+                </div>
+
+                {!isForgotPass && (
+                  <div className="input-group">
+                    <label>Password</label>
+                    <div className="input-wrapper">
+                      <span className="icon">🔒</span>
+                      <input 
+                        type="password" 
+                        placeholder="••••••••••••" 
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                      />
+                    </div>
+                    {!isRegistering && (
+                      <span 
+                        className="link-text forgot-link-inline" 
+                        onClick={() => { setIsForgotPass(true); setError(''); }}
+                      >
+                        Forgot Password?
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {isRegistering && (
+                  <div className="input-group">
+                    <label>Confirm Password</label>
+                    <div className="input-wrapper">
+                      <span className="icon">🔒</span>
+                      <input 
+                        type="password" 
+                        placeholder="••••••••••••" 
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <button type="submit" className="login-btn">
+                  {isForgotPass ? 'Send Reset Link' : isRegistering ? 'Sign Up' : 'Login to Vault'}
+                </button>
+
+                <div className="form-actions-bottom">
+                  {!isForgotPass ? (
                     <span 
-                      className="link-text forgot-link-inline" 
-                      onClick={() => { setIsForgotPass(true); setError(''); }}
+                      className="link-text" 
+                      onClick={() => { setIsRegistering(!isRegistering); setError(''); }}
                     >
-                      Forgot Password?
+                      {isRegistering ? 'Already have an account? Login' : "Don't have an account? Sign Up"}
+                    </span>
+                  ) : (
+                    <span 
+                      className="link-text" 
+                      onClick={() => { setIsForgotPass(false); setError(''); }}
+                    >
+                      Back to Login
                     </span>
                   )}
                 </div>
-              )}
-
-              {isRegistering && (
-                <div className="input-group">
-                  <label>Confirm Password</label>
-                  <div className="input-wrapper">
-                    <span className="icon">🔒</span>
-                    <input 
-                      type="password" 
-                      placeholder="••••••••••••" 
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
-              )}
-
-              <button type="submit" className="login-btn">
-                {isForgotPass ? 'Send Reset Link' : isRegistering ? 'Sign Up' : 'Login to Vault'}
-              </button>
-
-              {/* رابط إنشاء وحساب جديد أصبح تحت زر الـ Login تماماً */}
-              <div className="form-actions-bottom">
-                {!isForgotPass ? (
-                  <span 
-                    className="link-text" 
-                    onClick={() => { setIsRegistering(!isRegistering); setError(''); }}
-                  >
-                    {isRegistering ? 'Already have an account? Login' : "Don't have an account? Sign Up"}
-                  </span>
-                ) : (
-                  <span 
-                    className="link-text" 
-                    onClick={() => { setIsForgotPass(false); setError(''); }}
-                  >
-                    Back to Login
-                  </span>
-                )}
-              </div>
-            </form>
+              </form>
+            </>
           )}
         </div>
       </div>
