@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './App.css';
 
 function App() {
@@ -18,8 +18,26 @@ function App() {
   const [activeTab, setActiveTab] = useState('gallery'); // 'gallery', 'trash'
   const [selectedCategory, setSelectedCategory] = useState('All');
 
-  const [images, setImages] = useState([]);
-  const [trash, setTrash] = useState([]);
+  // استرجاع الصور والمحذوفات من الـ localStorage عند فتح الموقع لضمان عدم ضياعها عند الـ Refresh
+  const [images, setImages] = useState(() => {
+    const savedImages = localStorage.getItem('vault_images');
+    return savedImages ? JSON.parse(savedImages) : [];
+  });
+
+  const [trash, setTrash] = useState(() => {
+    const savedTrash = localStorage.getItem('vault_trash');
+    return savedTrash ? JSON.parse(savedTrash) : [];
+  });
+
+  // حفظ الصور تلقائياً في الـ localStorage كلما تغيرت
+  useEffect(() => {
+    localStorage.setItem('vault_images', JSON.stringify(images));
+  }, [images]);
+
+  // حفظ المحذوفات تلقائياً في الـ localStorage
+  useEffect(() => {
+    localStorage.setItem('vault_trash', JSON.stringify(trash));
+  }, [trash]);
 
   // Image Upload Preview States
   const [previewUrl, setPreviewUrl] = useState('');
@@ -67,7 +85,11 @@ function App() {
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setPreviewUrl(URL.createObjectURL(file));
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewUrl(reader.result); // تحويل الصورة إلى Base64 لكي تخزن بثبات في الـ localStorage
+      };
+      reader.readAsDataURL(file);
     }
   };
 
