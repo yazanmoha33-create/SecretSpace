@@ -1,0 +1,67 @@
+/* تعديل حاوية تسجيل الدخول لتكون عمودية وفي المنتصف */
+.split-login-container {
+  display: flex;
+  flex-direction: column-reverse; /* يجعل نموذج الدخول في الأعلى وتحته النصوص الترحيبية، أو العكس */
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  width: 100%;
+  padding: 30px 20px;
+  background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
+  position: relative;
+}
+
+/* قسم النصوص الترحيبية الزرقاء ليصبح في الأعلى */
+.hero-section {
+  width: 100%;
+  max-width: 500px;
+  background: transparent !important;
+  padding: 10px 0 20px 0 !important;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.hero-content h1 {
+  font-size: 2rem;
+  line-height: 1.3;
+  margin-bottom: 10px;
+}
+
+.hero-content p {
+  font-size: 0.95rem;
+  color: #94a3b8;
+}
+
+/* إخفاء التفاصيل الطويلة الزائدة إذا أردت التركيز على العنوان فقط في الأعلى */
+.hero-features {
+  display: none; 
+}
+
+/* قسم نموذج تسجيل الدخول ليصبح في منتصف الشاشة تماماً */
+.form-section {
+  width: 100%;
+  max-width: 450px;
+  padding: 0 !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.login-card {
+  width: 100%;
+  padding: 35px;
+  border-radius: 16px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+}
+
+/* زر الوضع الفاتح والداكن في الأعلى بالزاوية */
+.form-top-bar {
+  position: absolute;
+  top: -60px;
+  right: 0;
+}
