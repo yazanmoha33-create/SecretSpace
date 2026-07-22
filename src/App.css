@@ -1,67 +1,223 @@
-/* تعديل حاوية تسجيل الدخول لتكون عمودية وفي المنتصف */
-.split-login-container {
-  display: flex;
-  flex-direction: column-reverse; /* يجعل نموذج الدخول في الأعلى وتحته النصوص الترحيبية، أو العكس */
-  align-items: center;
-  justify-content: center;
+/* التنسيق العام والخلفية الأساسية */
+.app-container {
   min-height: 100vh;
-  width: 100%;
-  padding: 30px 20px;
-  background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
-  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  padding: 20px;
+  box-sizing: border-box;
 }
 
-/* قسم النصوص الترحيبية الزرقاء ليصبح في الأعلى */
-.hero-section {
+.app-container.light {
+  background-color: #0c4a6e; /* لون أزرق غامق متناسق مع واجهة المشروع */
+  color: #ffffff;
+}
+
+.app-container.dark {
+  background-color: #0b0f19;
+  color: #f1f1f1;
+}
+
+/* شريط زر تغيير الوضع في الأعلى */
+.top-bar-settings {
   width: 100%;
-  max-width: 500px;
-  background: transparent !important;
-  padding: 10px 0 20px 0 !important;
-  text-align: center;
+  display: flex;
+  justify-content: flex-end;
+  max-width: 460px;
+}
+
+.theme-toggle-btn {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 6px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+  transition: all 0.2s ease;
+}
+
+.theme-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* حاوية المحتوى الرئيسية (الشعار في الأعلى وبطاقة الدخول في المنتصف) */
+.main-layout {
   display: flex;
   flex-direction: column;
   align-items: center;
+  width: 100%;
+  max-width: 460px;
+  margin: auto;
+  gap: 30px;
+}
+
+/* القسم العلوي: الشعار والنص الترويجي */
+.hero-section {
+  text-align: center;
+}
+
+.logo-area {
+  display: flex;
+  align-items: center;
   justify-content: center;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 
-.hero-content h1 {
-  font-size: 2rem;
+.logo-text {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.logo-icon {
+  font-size: 16px;
+}
+
+.hero-section h1 {
+  font-size: 26px;
+  font-weight: 800;
+  margin-bottom: 8px;
   line-height: 1.3;
-  margin-bottom: 10px;
 }
 
-.hero-content p {
-  font-size: 0.95rem;
+.highlight-text {
+  color: #38bdf8;
+}
+
+.hero-section p {
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+/* بطاقة تسجيل الدخول في منتصف الشاشة */
+.login-card {
+  width: 100%;
+  background: #ffffff;
+  color: #1f2937;
+  padding: 35px 25px;
+  border-radius: 20px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+  box-sizing: border-box;
+}
+
+.dark .login-card {
+  background: #1e293b;
+  color: #f1f1f1;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+.login-header h2 {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.login-header p {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.dark .login-header p {
   color: #94a3b8;
 }
 
-/* إخفاء التفاصيل الطويلة الزائدة إذا أردت التركيز على العنوان فقط في الأعلى */
-.hero-features {
-  display: none; 
-}
-
-/* قسم نموذج تسجيل الدخول ليصبح في منتصف الشاشة تماماً */
-.form-section {
-  width: 100%;
-  max-width: 450px;
-  padding: 0 !important;
+/* حقول الإدخال */
+.login-form {
   display: flex;
   flex-direction: column;
+  gap: 16px;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+}
+
+.input-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.dark .input-group label {
+  color: #cbd5e1;
+}
+
+.input-wrapper {
+  display: flex;
   align-items: center;
-  justify-content: center;
-  position: relative;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  padding: 0 12px;
+  background: #f9fafb;
 }
 
-.login-card {
+.dark .input-wrapper {
+  border-color: #475569;
+  background: #0f172a;
+}
+
+.icon {
+  margin-left: 8px;
+  font-size: 14px;
+}
+
+.input-wrapper input {
   width: 100%;
-  padding: 35px;
-  border-radius: 16px;
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+  padding: 12px 6px;
+  border: none;
+  font-size: 14px;
+  outline: none;
+  background: transparent;
+  color: inherit;
 }
 
-/* زر الوضع الفاتح والداكن في الأعلى بالزاوية */
-.form-top-bar {
-  position: absolute;
-  top: -60px;
-  right: 0;
+/* زر الدخول */
+.login-btn {
+  background-color: #0284c7;
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  margin-top: 6px;
+}
+
+.login-btn:hover {
+  background-color: #0369a1;
+}
+
+/* رسالة النجاح عند تسجيل الدخول */
+.success-message h3 {
+  font-size: 20px;
+  margin-bottom: 10px;
+  color: #22c55e;
+}
+
+.success-message p {
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+/* الحقوق في الأسفل */
+.footer-copyright {
+  font-size: 12px;
+  opacity: 0.7;
+  margin-top: 15px;
 }
