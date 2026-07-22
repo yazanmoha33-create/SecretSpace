@@ -5,24 +5,26 @@ function App() {
   const [theme, setTheme] = useState('light');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   
-  // طرق التنقل بين النماذج (login, signup, forgot)
-  const [authMode, setAuthMode] = useState('login'); // 'login', 'signup', 'forgot'
+  // Auth Modes: 'login', 'signup', 'forgot'
+  const [authMode, setAuthMode] = useState('login');
   
-  // حقول الإدخال
-  const [identifier, setIdentifier] = useState(''); // البريد الإلكتروني أو رقم الهاتف
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  const [activeTab, setActiveTab] = useState('gallery');
+  const [activeTab, setActiveTab] = useState('gallery'); // 'gallery', 'trash'
   const [selectedCategory, setSelectedCategory] = useState('All');
 
   const [images, setImages] = useState([]);
   const [trash, setTrash] = useState([]);
 
-  // معالجة تسجيل الدخول
+  // Image Upload Preview States
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [uploadCategory, setUploadCategory] = useState('Nature');
+
   const handleLogin = (e) => {
     e.preventDefault();
     if (!identifier || !password) {
@@ -33,7 +35,6 @@ function App() {
     setIsLoggedIn(true);
   };
 
-  // معالجة إنشاء حساب جديد
   const handleSignup = (e) => {
     e.preventDefault();
     if (!identifier || !password || !confirmPassword) {
@@ -52,7 +53,6 @@ function App() {
     }, 1500);
   };
 
-  // معالجة استعادة كلمة المرور
   const handleForgot = (e) => {
     e.preventDefault();
     if (!identifier) {
@@ -63,16 +63,33 @@ function App() {
     setSuccessMsg('Password reset instructions sent to your identifier.');
   };
 
-  const handleImageUpload = (e) => {
+  // Step 1: Select image and show preview (No auto-save)
+  const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (file) {
-      const newImg = {
-        id: Date.now(),
-        url: URL.createObjectURL(file),
-        category: selectedCategory === 'All' ? 'Nature' : selectedCategory
-      };
-      setImages([newImg, ...images]);
+      setPreviewUrl(URL.createObjectURL(file));
     }
+  };
+
+  // Step 2: Click Save to save the image permanently to the gallery
+  const handleSaveImage = (e) => {
+    e.preventDefault();
+    if (!previewUrl) return;
+
+    const newImg = {
+      id: Date.now(),
+      url: previewUrl,
+      category: uploadCategory
+    };
+
+    setImages([newImg, ...images]);
+    setPreviewUrl('');
+    setUploadCategory('Nature');
+  };
+
+  const handleCancelUpload = () => {
+    setPreviewUrl('');
+    setUploadCategory('Nature');
   };
 
   const handleDeleteImage = (id) => {
@@ -125,7 +142,7 @@ function App() {
           {!isLoggedIn ? (
             <div className="animate-fade">
               
-              {/* نموذج تسجيل الدخول */}
+              {/* Sign In Form */}
               {authMode === 'login' && (
                 <>
                   <div className="login-header">
@@ -184,7 +201,7 @@ function App() {
                 </>
               )}
 
-              {/* نموذج إنشاء حساب جديد */}
+              {/* Sign Up Form */}
               {authMode === 'signup' && (
                 <>
                   <div className="login-header">
@@ -250,7 +267,7 @@ function App() {
                 </>
               )}
 
-              {/* نموذج نسيان كلمة المرور */}
+              {/* Forgot Password Form */}
               {authMode === 'forgot' && (
                 <>
                   <div className="login-header">
@@ -328,10 +345,35 @@ function App() {
 
                   <div className="upload-section">
                     <label className="upload-btn">
-                      ➕ Upload New Image
-                      <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
+                      ➕ Select Image to Upload
+                      <input type="file" accept="image/*" onChange={handleFileSelect} style={{ display: 'none' }} />
                     </label>
                   </div>
+
+                  {/* Image Preview & Save Section */}
+                  {previewUrl && (
+                    <div className="preview-container animate-fade" style={{ background: 'rgba(0,0,0,0.3)', padding: '15px', borderRadius: '16px', textAlign: 'center', margin: '10px 0' }}>
+                      <p style={{ fontSize: '13px', marginBottom: '8px', color: '#38bdf8', fontWeight: '600' }}>Image Preview</p>
+                      <img src={previewUrl} alt="Preview" style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '10px', marginBottom: '10px', border: '1px solid #38bdf8' }} />
+                      
+                      <div className="input-group" style={{ marginBottom: '10px' }}>
+                        <label>Select Category for this Image</label>
+                        <select 
+                          value={uploadCategory} 
+                          onChange={(e) => setUploadCategory(e.target.value)}
+                          style={{ width: '100%', padding: '8px', borderRadius: '8px', background: '#0f172a', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', outline: 'none' }}
+                        >
+                          <option value="Nature">Nature</option>
+                          <option value="Scenery">Scenery</option>
+                        </select>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '10px' }}>
+                        <button onClick={handleSaveImage} className="login-btn" style={{ flex: 1, marginTop: '0', background: '#22c55e' }}>Save</button>
+                        <button onClick={handleCancelUpload} className="login-btn" style={{ flex: 1, marginTop: '0', background: '#ef4444' }}>Cancel</button>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="gallery-grid-full">
                     {filteredImages.length > 0 ? (
@@ -349,7 +391,7 @@ function App() {
                         </div>
                       ))
                     ) : (
-                      <p className="no-images-text">No images added in this section yet. Upload your first image!</p>
+                      <p className="no-images-text">No images added in this section yet. Select and save your first image!</p>
                     )}
                   </div>
                 </>
