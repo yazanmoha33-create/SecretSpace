@@ -12,10 +12,17 @@ function App() {
   const [authMode, setAuthMode] = useState('login'); // 'login', 'signup', 'forgot'
   
   const [identifier, setIdentifier] = useState('');
-  const [fullName, setFullName] = useState(''); // NEW: Optional personal name field
+  const [fullName, setFullName] = useState(''); 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   
+  // Show/Hide Password States
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showPin, setShowPin] = useState(false);
+
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -471,14 +478,23 @@ function App() {
 
                     <div className="input-group">
                       <label>Password</label>
-                      <div className="input-wrapper">
+                      <div className="input-wrapper" style={{ display: 'flex', alignItems: 'center' }}>
                         <span className="icon">🔑</span>
                         <input 
-                          type="password" 
+                          type={showPassword ? "text" : "password"} 
                           placeholder="••••••••"
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
+                          style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', color: 'inherit' }}
                         />
+                        <button 
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '14px', padding: '0 8px' }}
+                          title={showPassword ? "Hide password" : "Show password"}
+                        >
+                          {showPassword ? "👁️‍🗨️" : "👁️"}
+                        </button>
                       </div>
                       <span 
                         className="link-text forgot-link-inline" 
@@ -517,7 +533,6 @@ function App() {
                     {errorMsg && <p className="error-text">{errorMsg}</p>}
                     {successMsg && <p className="success-text">{successMsg}</p>}
 
-                    {/* NEW: Optional Personal Name Field */}
                     <div className="input-group">
                       <label>Personal Name (Optional)</label>
                       <div className="input-wrapper">
@@ -546,27 +561,43 @@ function App() {
 
                     <div className="input-group">
                       <label>Password</label>
-                      <div className="input-wrapper">
+                      <div className="input-wrapper" style={{ display: 'flex', alignItems: 'center' }}>
                         <span className="icon">🔑</span>
                         <input 
-                          type="password" 
+                          type={showPassword ? "text" : "password"} 
                           placeholder="••••••••"
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
+                          style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', color: 'inherit' }}
                         />
+                        <button 
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '14px', padding: '0 8px' }}
+                        >
+                          {showPassword ? "👁️‍🗨️" : "👁️"}
+                        </button>
                       </div>
                     </div>
 
                     <div className="input-group">
                       <label>Confirm Password</label>
-                      <div className="input-wrapper">
+                      <div className="input-wrapper" style={{ display: 'flex', alignItems: 'center' }}>
                         <span className="icon">🔐</span>
                         <input 
-                          type="password" 
+                          type={showConfirmPassword ? "text" : "password"} 
                           placeholder="••••••••"
                           value={confirmPassword}
                           onChange={(e) => setConfirmPassword(e.target.value)}
+                          style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', color: 'inherit' }}
                         />
+                        <button 
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '14px', padding: '0 8px' }}
+                        >
+                          {showConfirmPassword ? "👁️‍🗨️" : "👁️"}
+                        </button>
                       </div>
                     </div>
 
@@ -639,16 +670,23 @@ function App() {
               <form onSubmit={handleUnlockPin} className="login-form">
                 {errorMsg && <p className="error-text">{errorMsg}</p>}
                 <div className="input-group">
-                  <div className="input-wrapper">
+                  <div className="input-wrapper" style={{ display: 'flex', alignItems: 'center' }}>
                     <span className="icon">🔑</span>
                     <input 
-                      type="password" 
+                      type={showPin ? "text" : "password"} 
                       maxLength="6"
                       placeholder="Enter PIN (default 1234)"
                       value={enteredPin}
                       onChange={(e) => setEnteredPin(e.target.value)}
-                      style={{ textAlign: 'center', letterSpacing: '4px' }}
+                      style={{ textAlign: 'center', letterSpacing: '4px', flex: 1, border: 'none', background: 'transparent', outline: 'none', color: 'inherit' }}
                     />
+                    <button 
+                      type="button"
+                      onClick={() => setShowPin(!showPin)}
+                      style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '14px', padding: '0 8px' }}
+                    >
+                      {showPin ? "👁️‍🗨️" : "👁️"}
+                    </button>
                   </div>
                 </div>
                 <button type="submit" className="login-btn" style={{ background: '#2563eb' }}>Unlock Vault</button>
@@ -674,7 +712,7 @@ function App() {
                 <button onClick={() => setActiveTab('faq')} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: '#38bdf8', fontSize: '11px', padding: '3px 8px', borderRadius: '6px', cursor: 'pointer', whiteSpace: 'nowrap' }}>❓ FAQ</button>
               </div>
 
-              {/* Navigation Tabs with improved spacing */}
+              {/* Navigation Tabs */}
               <div className="vault-nav-tabs" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', marginBottom: '12px' }}>
                 <button className={`tab-btn ${activeTab === 'gallery' ? 'active' : ''}`} onClick={() => setActiveTab('gallery')}>📁 Gallery</button>
                 <button className={`tab-btn ${activeTab === 'favorites' ? 'active' : ''}`} onClick={() => setActiveTab('favorites')}>⭐ Favorites</button>
@@ -1013,35 +1051,61 @@ function App() {
 
                   <div className="input-group">
                     <label>Vault Security PIN</label>
-                    <div className="input-wrapper">
+                    <div className="input-wrapper" style={{ display: 'flex', alignItems: 'center' }}>
                       <span className="icon">🔐</span>
                       <input 
-                        type="password" 
+                        type={showPin ? "text" : "password"} 
                         value={securitySettings.pin}
                         onChange={(e) => setSecuritySettings({ ...securitySettings, pin: e.target.value })}
+                        style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', color: 'inherit' }}
                       />
+                      <button 
+                        type="button"
+                        onClick={() => setShowPin(!showPin)}
+                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '14px', padding: '0 8px' }}
+                      >
+                        {showPin ? "👁️‍🗨️" : "👁️"}
+                      </button>
                     </div>
                   </div>
 
                   <form onSubmit={handleChangePassword} style={{ marginTop: '15px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '15px' }}>
                     <h4 style={{ color: '#38bdf8', marginBottom: '10px', fontSize: '14px' }}>Change Account Password</h4>
                     <div className="input-group" style={{ marginBottom: '8px' }}>
-                      <input 
-                        type="password" 
-                        placeholder="Current Password"
-                        value={oldPasswordInput}
-                        onChange={(e) => setOldPasswordInput(e.target.value)}
-                        style={{ width: '100%', padding: '8px', borderRadius: '8px', background: '#0f172a', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', outline: 'none' }}
-                      />
+                      <div style={{ display: 'flex', alignItems: 'center', background: '#0f172a', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.2)', padding: '0 8px' }}>
+                        <input 
+                          type={showOldPassword ? "text" : "password"} 
+                          placeholder="Current Password"
+                          value={oldPasswordInput}
+                          onChange={(e) => setOldPasswordInput(e.target.value)}
+                          style={{ width: '100%', padding: '8px 0', background: 'transparent', color: '#fff', border: 'none', outline: 'none' }}
+                        />
+                        <button 
+                          type="button"
+                          onClick={() => setShowOldPassword(!showOldPassword)}
+                          style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '14px', padding: '0 4px' }}
+                        >
+                          {showOldPassword ? "👁️‍🗨️" : "👁️"}
+                        </button>
+                      </div>
                     </div>
                     <div className="input-group" style={{ marginBottom: '10px' }}>
-                      <input 
-                        type="password" 
-                        placeholder="New Password"
-                        value={newPasswordInput}
-                        onChange={(e) => setNewPasswordInput(e.target.value)}
-                        style={{ width: '100%', padding: '8px', borderRadius: '8px', background: '#0f172a', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', outline: 'none' }}
-                      />
+                      <div style={{ display: 'flex', alignItems: 'center', background: '#0f172a', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.2)', padding: '0 8px' }}>
+                        <input 
+                          type={showNewPassword ? "text" : "password"} 
+                          placeholder="New Password"
+                          value={newPasswordInput}
+                          onChange={(e) => setNewPasswordInput(e.target.value)}
+                          style={{ width: '100%', padding: '8px 0', background: 'transparent', color: '#fff', border: 'none', outline: 'none' }}
+                        />
+                        <button 
+                          type="button"
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                          style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '14px', padding: '0 4px' }}
+                        >
+                          {showNewPassword ? "👁️‍🗨️" : "👁️"}
+                        </button>
+                      </div>
                     </div>
                     <button type="submit" className="login-btn" style={{ marginTop: 0, background: '#4f46e5' }}>Update Password</button>
                   </form>
@@ -1094,7 +1158,7 @@ function App() {
                 </div>
               )}
 
-              {/* Lightbox Modal with animate-fade-in */}
+              {/* Lightbox Modal */}
               {lightboxImg && (
                 <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.85)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 1100, padding: '20px' }} onClick={() => { setLightboxImg(null); setIsSlideshowActive(false); }}>
                   <div className="animate-fade-in" style={{ background: '#1e293b', padding: '20px', borderRadius: '16px', maxWidth: '500px', width: '90%', textAlign: 'center', border: '1px solid rgba(56, 189, 248, 0.4)' }} onClick={(e) => e.stopPropagation()}>
