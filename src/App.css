@@ -14,18 +14,29 @@
   justify-content: space-between;
   align-items: center;
   padding: 20px;
-  transition: background-color 0.4s ease, color 0.4s ease;
+  position: relative;
+  overflow-x: hidden;
+  background-size: 300% 300%;
+  transition: color 0.4s ease;
 }
 
-/* سمات الوضع النهاري والليلي الأصلية */
+/* خلفية متدرجة ذات ألوان متحركة (لمعة وانتقالات سحرية) */
 .app-container.light {
-  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  background: linear-gradient(120deg, #0284c7, #38bdf8, #0369a1, #6366f1);
+  animation: gradientShift 12s ease infinite;
   color: #ffffff;
 }
 
 .app-container.dark {
-  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+  background: linear-gradient(120deg, #0f172a, #1e1b4b, #312e81, #090d16);
+  animation: gradientShift 12s ease infinite;
   color: #f1f1f1;
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 .top-bar-settings {
@@ -34,22 +45,23 @@
   display: flex;
   justify-content: flex-end;
   margin-bottom: 10px;
+  z-index: 10;
 }
 
 .theme-toggle-btn {
-  background: rgba(255, 255, 255, 0.2);
-  border: none;
-  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  padding: 8px 16px;
   border-radius: 20px;
   color: white;
   font-weight: 600;
   cursor: pointer;
-  backdrop-filter: blur(5px);
+  backdrop-filter: blur(8px);
   transition: all 0.3s ease;
 }
 
 .theme-toggle-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.4);
   transform: scale(1.05);
 }
 
@@ -61,12 +73,12 @@
   max-width: 460px;
   margin: auto;
   gap: 25px;
+  z-index: 10;
   transition: max-width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* توسيع المساحة عند تسجيل الدخول بعرض أكبر ومرتب */
 .main-layout.expanded-layout {
-  max-width: 800px;
+  max-width: 850px;
 }
 
 .hero-section {
@@ -83,9 +95,10 @@
 }
 
 .logo-text {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 700;
   letter-spacing: 0.5px;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.15);
 }
 
 .logo-icon {
@@ -93,36 +106,66 @@
 }
 
 .hero-section h1 {
-  font-size: 28px;
+  font-size: 30px;
   font-weight: 800;
   margin-bottom: 8px;
   line-height: 1.2;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.15);
 }
 
 .highlight-text {
-  color: #38bdf8;
+  color: #bae6fd;
 }
 
 .hero-section p {
   font-size: 14px;
-  opacity: 0.9;
+  opacity: 0.95;
 }
 
+/* تأثير اللمعة المتحركة (Shimmer Border/Glow) على بطاقة الدخول والخزنة */
 .login-card {
   width: 100%;
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(16px);
   color: #1f2937;
   padding: 35px 25px;
   border-radius: 24px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25), 0 0 20px rgba(56, 189, 248, 0.3);
+  border: 1.5px solid rgba(255, 255, 255, 0.6);
+  position: relative;
+  overflow: hidden;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   animation: fadeInUp 0.6s ease;
 }
 
+.login-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    60deg,
+    transparent,
+    rgba(255, 255, 255, 0.15),
+    transparent
+  );
+  transform: rotate(30deg);
+  animation: shimmerEffect 6s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes shimmerEffect {
+  0% { transform: translateY(-100%) rotate(30deg); }
+  100% { transform: translateY(100%) rotate(30deg); }
+}
+
 .dark .login-card {
-  background: #1e293b;
+  background: rgba(30, 41, 59, 0.88);
   color: #f1f1f1;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 25px rgba(56, 189, 248, 0.15);
 }
 
 .login-card.vault-card-wide {
@@ -179,12 +222,12 @@
   border-radius: 12px;
   padding: 0 12px;
   background: #f9fafb;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  transition: all 0.3s ease;
 }
 
 .input-wrapper:focus-within {
   border-color: #0284c7;
-  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+  box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.15);
 }
 
 .dark .input-wrapper {
@@ -216,13 +259,15 @@
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.2s, transform 0.2s;
+  transition: all 0.2s ease;
   margin-top: 8px;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
 }
 
 .login-btn:hover {
   background-color: #0369a1;
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(2, 132, 199, 0.4);
 }
 
 .forgot-link-inline {
@@ -268,7 +313,7 @@
   margin: 0;
 }
 
-/* تنسيقات شاشة الخزنة الموسعة بكامل العرض وبشكل أنيق */
+/* تنسيقات الخزنة الموسعة */
 .vault-container {
   display: flex;
   flex-direction: column;
@@ -501,12 +546,13 @@
 
 .footer-copyright {
   font-size: 12px;
-  opacity: 0.8;
+  opacity: 0.85;
   margin-top: 20px;
   color: white;
+  z-index: 10;
 }
 
-/* --- حركات الأنيميشن الخفيفة (Smooth Animations) --- */
+/* --- حركات الأنيميشن --- */
 @keyframes fadeIn {
   from { opacity: 0; transform: scale(0.97); }
   to { opacity: 1; transform: scale(1); }
