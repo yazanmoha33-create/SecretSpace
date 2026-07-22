@@ -14,9 +14,19 @@ function App() {
   const [successMsg, setSuccessMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Active Main Tab: 'gallery', 'trash', 'profile', 'analytics', 'security', 'favorites'
+  // Active Main Tab: 'gallery', 'favorites', 'trash', 'profile', 'analytics', 'security'
   const [activeTab, setActiveTab] = useState('gallery'); 
   const [selectedCategory, setSelectedCategory] = useState('All');
+  
+  // NEW: Search Query state
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // NEW: Lightbox Modal state
+  const [lightboxImg, setLightboxImg] = useState(null);
+
+  // NEW: Change Password states inside security
+  const [oldPasswordInput, setOldPasswordInput] = useState('');
+  const [newPasswordInput, setNewPasswordInput] = useState('');
 
   // Load images, trash, profile & security settings from LocalStorage
   const [images, setImages] = useState(() => {
@@ -43,8 +53,8 @@ function App() {
   const [securitySettings, setSecuritySettings] = useState(() => {
     try {
       const saved = localStorage.getItem('vault_security');
-      return saved ? JSON.parse(saved) : { pin: '1234', twoFactor: false };
-    } catch { return { pin: '1234', twoFactor: false }; }
+      return saved ? JSON.parse(saved) : { pin: '1234', twoFactor: false, accountPassword: 'password123' };
+    } catch { return { pin: '1234', twoFactor: false, accountPassword: 'password123' }; }
   });
 
   // Save states automatically
@@ -185,9 +195,58 @@ function App() {
     setTheme(theme === 'light' ? 'dark' : 'light');
   };
 
-  const filteredImages = selectedCategory === 'All' 
-    ? images 
-    : images.filter(img => img.category === selectedCategory);
+  // NEW: Change Password Handler
+  const handleChangePassword = (e) => {
+    e.preventDefault();
+    if (!oldPasswordInput || !newPasswordInput) {
+      alert('Please fill in all password fields');
+      return;
+    }
+    setSecuritySettings({ ...securitySettings, accountPassword: newPasswordInput });
+    setOldPasswordInput('');
+    setNewPasswordInput('');
+    alert('Password updated successfully!');
+  };
+
+  // NEW: Export Backup JSON
+  const handleExportData = () => {
+    const dataObj = { images, trash, userProfile, securitySettings };
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dataObj, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `vault_backup_${Date.now()}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
+  // NEW: Import Backup JSON
+  const handleImportData = (e) => {
+    const fileReader = new FileReader();
+    if (e.target.files[0]) {
+      fileReader.readAsText(e.target.files[0], "UTF-8");
+      fileReader.onload = (event) => {
+        try {
+          const parsed = JSON.parse(event.target.result);
+          if (parsed.images) setImages(parsed.images);
+          if (parsed.trash) setTrash(parsed.trash);
+          if (parsed.userProfile) setUserProfile(parsed.userProfile);
+          if (parsed.securitySettings) setSecuritySettings(parsed.securitySettings);
+          alert('Data imported successfully!');
+        } catch {
+          alert('Invalid backup JSON file.');
+        }
+      };
+    }
+  };
+
+  // Filtered Images with Category & Search Support
+  const filteredImages = images.filter(img => {
+    const matchesCategory = selectedCategory === 'All' || img.category === selectedCategory;
+    const matchesSearch = img.category.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          img.date.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
 
   const favoriteImages = images.filter(img => img.isFavorite);
 
@@ -396,7 +455,7 @@ function App() {
                 </div>
               </div>
 
-              {/* Navigation Tabs including the 4 New Screens */}
+              {/* Navigation Tabs including all screens */}
               <div className="vault-nav-tabs" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
                 <button 
                   className={`tab-btn ${activeTab === 'gallery' ? 'active' : ''}`}
@@ -439,6 +498,19 @@ function App() {
               {/* 1. GALLERY SCREEN */}
               {activeTab === 'gallery' && (
                 <>
+                  {/* NEW: Search Bar Component */}
+                  <div className="input-group" style={{ margin: '10px 0 5px 0' }}>
+                    <div className="input-wrapper">
+                      <span className="icon">🔍</span>
+                      <input 
+                        type="text" 
+                        placeholder="Search by category or date..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
                   <div className="categories-bar">
                     {['All', 'Nature', 'Scenery'].map(cat => (
                       <button 
@@ -485,27 +557,28 @@ function App() {
                   <div className="gallery-grid-full">
                     {filteredImages.length > 0 ? (
                       filteredImages.map(img => (
-                        <div key={img.id} className="image-card-full">
+                        <div key={img.id} className="image-card-full" onClick={() => setLightboxImg(img)} style={{ cursor: 'pointer' }}>
                           <img src={img.url} alt="Vault item" />
                           <span className="img-badge">{img.category}</span>
                           <button 
-                            style={{ position: 'absolute', top: '8px', left: '8px', background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', fontSize: '14px' }}
-                            onClick={() => handleToggleFavorite(img.id)}
+                            style={{ position: 'absolute', top: '8px', left: '8px', background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', fontSize: '14px', zIndex: 2 }}
+                            onClick={(e) => { e.stopPropagation(); handleToggleFavorite(img.id); }}
                             title="Favorite"
                           >
                             {img.isFavorite ? '⭐' : '☆'}
                           </button>
                           <button 
                             className="delete-icon-btn"
-                            onClick={() => handleDeleteImage(img.id)}
+                            onClick={(e) => { e.stopPropagation(); handleDeleteImage(img.id); }}
                             title="Delete"
+                            style={{ zIndex: 2 }}
                           >
                             ❌
                           </button>
                         </div>
                       ))
                     ) : (
-                      <p className="no-images-text">No images added in this section yet. Select and save your first image!</p>
+                      <p className="no-images-text">No images found matching your search.</p>
                     )}
                   </div>
                 </>
@@ -516,18 +589,19 @@ function App() {
                 <div className="gallery-grid-full" style={{ marginTop: '15px' }}>
                   {favoriteImages.length > 0 ? (
                     favoriteImages.map(img => (
-                      <div key={img.id} className="image-card-full">
+                      <div key={img.id} className="image-card-full" onClick={() => setLightboxImg(img)} style={{ cursor: 'pointer' }}>
                         <img src={img.url} alt="Favorite item" />
                         <span className="img-badge">{img.category}</span>
                         <button 
-                          style={{ position: 'absolute', top: '8px', left: '8px', background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', fontSize: '14px' }}
-                          onClick={() => handleToggleFavorite(img.id)}
+                          style={{ position: 'absolute', top: '8px', left: '8px', background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', fontSize: '14px', zIndex: 2 }}
+                          onClick={(e) => { e.stopPropagation(); handleToggleFavorite(img.id); }}
                         >
                           ⭐
                         </button>
                         <button 
                           className="delete-icon-btn"
-                          onClick={() => handleDeleteImage(img.id)}
+                          onClick={(e) => { e.stopPropagation(); handleDeleteImage(img.id); }}
+                          style={{ zIndex: 2 }}
                         >
                           ❌
                         </button>
@@ -558,7 +632,7 @@ function App() {
                 </div>
               )}
 
-              {/* 4. PROFILE SCREEN (NEW) */}
+              {/* 4. PROFILE SCREEN */}
               {activeTab === 'profile' && (
                 <div className="animate-fade" style={{ padding: '15px 0' }}>
                   <h3 style={{ color: '#38bdf8', marginBottom: '15px' }}>User Profile Settings</h3>
@@ -588,23 +662,33 @@ function App() {
                 </div>
               )}
 
-              {/* 5. ANALYTICS SCREEN (NEW) */}
+              {/* 5. ANALYTICS SCREEN + NEW BACKUP EXPORT/IMPORT */}
               {activeTab === 'analytics' && (
                 <div className="animate-fade" style={{ padding: '15px 0', textAlign: 'left' }}>
                   <h3 style={{ color: '#38bdf8', marginBottom: '15px' }}>Vault Analytics & Storage</h3>
-                  <div style={{ background: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '12px', marginBottom: '10px' }}>
+                  <div style={{ background: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '12px', marginBottom: '15px' }}>
                     <p style={{ fontSize: '14px', marginBottom: '8px' }}>📁 Total Stored Images: <b>{images.length}</b></p>
                     <p style={{ fontSize: '14px', marginBottom: '8px' }}>🌲 Nature Category: <b>{images.filter(i => i.category === 'Nature').length}</b></p>
                     <p style={{ fontSize: '14px', marginBottom: '8px' }}>🌄 Scenery Category: <b>{images.filter(i => i.category === 'Scenery').length}</b></p>
                     <p style={{ fontSize: '14px' }}>🗑️ Items in Trash: <b>{trash.length}</b></p>
                   </div>
+
+                  <h4 style={{ color: '#38bdf8', marginBottom: '10px', fontSize: '14px' }}>Data Backup & Restore</h4>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button onClick={handleExportData} className="login-btn" style={{ flex: 1, marginTop: 0, background: '#0284c7' }}>📥 Export JSON</button>
+                    <label className="login-btn" style={{ flex: 1, marginTop: 0, background: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                      📤 Import JSON
+                      <input type="file" accept=".json" onChange={handleImportData} style={{ display: 'none' }} />
+                    </label>
+                  </div>
                 </div>
               )}
 
-              {/* 6. SECURITY SETTINGS SCREEN (NEW) */}
+              {/* 6. SECURITY SETTINGS SCREEN + NEW CHANGE PASSWORD */}
               {activeTab === 'security' && (
                 <div className="animate-fade" style={{ padding: '15px 0', textAlign: 'left' }}>
                   <h3 style={{ color: '#38bdf8', marginBottom: '15px' }}>Security Configuration</h3>
+                  
                   <div className="input-group">
                     <label>Vault Security PIN</label>
                     <div className="input-wrapper">
@@ -616,6 +700,31 @@ function App() {
                       />
                     </div>
                   </div>
+
+                  {/* NEW: Change Password Section */}
+                  <form onSubmit={handleChangePassword} style={{ marginTop: '15px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '15px' }}>
+                    <h4 style={{ color: '#38bdf8', marginBottom: '10px', fontSize: '14px' }}>Change Account Password</h4>
+                    <div className="input-group" style={{ marginBottom: '8px' }}>
+                      <input 
+                        type="password" 
+                        placeholder="Current Password"
+                        value={oldPasswordInput}
+                        onChange={(e) => setOldPasswordInput(e.target.value)}
+                        style={{ width: '100%', padding: '8px', borderRadius: '8px', background: '#0f172a', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', outline: 'none' }}
+                      />
+                    </div>
+                    <div className="input-group" style={{ marginBottom: '10px' }}>
+                      <input 
+                        type="password" 
+                        placeholder="New Password"
+                        value={newPasswordInput}
+                        onChange={(e) => setNewPasswordInput(e.target.value)}
+                        style={{ width: '100%', padding: '8px', borderRadius: '8px', background: '#0f172a', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', outline: 'none' }}
+                      />
+                    </div>
+                    <button type="submit" className="login-btn" style={{ marginTop: 0, background: '#4f46e5' }}>Update Password</button>
+                  </form>
+
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '15px' }}>
                     <input 
                       type="checkbox" 
@@ -624,6 +733,18 @@ function App() {
                       onChange={(e) => setSecuritySettings({ ...securitySettings, twoFactor: e.target.checked })}
                     />
                     <label htmlFor="2fa" style={{ fontSize: '13px', cursor: 'pointer' }}>Enable Two-Factor Authentication (2FA)</label>
+                  </div>
+                </div>
+              )}
+
+              {/* NEW: Lightbox Modal for Full Image View */}
+              {lightboxImg && (
+                <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.85)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 1100, padding: '20px' }} onClick={() => setLightboxImg(null)}>
+                  <div style={{ background: '#1e293b', padding: '20px', borderRadius: '16px', maxWidth: '500px', width: '90%', textAlign: 'center', border: '1px solid rgba(56, 189, 248, 0.4)' }} onClick={(e) => e.stopPropagation()}>
+                    <img src={lightboxImg.url} alt="Enlarged view" style={{ width: '100%', maxHeight: '350px', objectFit: 'contain', borderRadius: '12px', marginBottom: '12px' }} />
+                    <p style={{ color: '#38bdf8', fontSize: '14px', fontWeight: 'bold' }}>Category: {lightboxImg.category}</p>
+                    <p style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '15px' }}>Added on: {lightboxImg.date}</p>
+                    <button onClick={() => setLightboxImg(null)} className="login-btn" style={{ marginTop: 0, background: '#ef4444' }}>Close Preview</button>
                   </div>
                 </div>
               )}
