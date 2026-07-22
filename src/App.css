@@ -7,6 +7,7 @@
   font-family: 'Inter', sans-serif;
 }
 
+/* خلفية الصفحة أصبحت ثابتة ونظيفة تماماً كما طلبت */
 .app-container {
   min-height: 100vh;
   display: flex;
@@ -16,27 +17,17 @@
   padding: 20px;
   position: relative;
   overflow-x: hidden;
-  background-size: 300% 300%;
   transition: color 0.4s ease;
 }
 
-/* خلفية متدرجة بألوان غامقة وحيوية مع حركة ولعة */
 .app-container.light {
-  background: linear-gradient(120deg, #034f84, #0284c7, #012b45, #312e81);
-  animation: gradientShift 14s ease infinite;
-  color: #ffffff;
+  background-color: #f3f4f6;
+  color: #1f2937;
 }
 
 .app-container.dark {
-  background: linear-gradient(120deg, #050b14, #0f172a, #1e1b4b, #020617);
-  animation: gradientShift 14s ease infinite;
+  background-color: #0b0f19;
   color: #f1f1f1;
-}
-
-@keyframes gradientShift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
 }
 
 .top-bar-settings {
@@ -49,19 +40,22 @@
 }
 
 .theme-toggle-btn {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.15);
   padding: 8px 16px;
   border-radius: 20px;
-  color: white;
   font-weight: 600;
   cursor: pointer;
-  backdrop-filter: blur(8px);
   transition: all 0.3s ease;
 }
 
+.dark .theme-toggle-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
 .theme-toggle-btn:hover {
-  background: rgba(0, 0, 0, 0.5);
   transform: scale(1.05);
 }
 
@@ -97,8 +91,6 @@
 .logo-text {
   font-size: 24px;
   font-weight: 700;
-  letter-spacing: 0.5px;
-  text-shadow: 0 2px 10px rgba(0,0,0,0.3);
 }
 
 .logo-icon {
@@ -110,32 +102,44 @@
   font-weight: 800;
   margin-bottom: 8px;
   line-height: 1.2;
-  text-shadow: 0 2px 10px rgba(0,0,0,0.3);
 }
 
 .highlight-text {
-  color: #7dd3fc;
+  color: #0369a1;
+}
+
+.dark .highlight-text {
+  color: #38bdf8;
 }
 
 .hero-section p {
   font-size: 14px;
-  opacity: 0.95;
+  opacity: 0.8;
 }
 
-/* بطاقة الدخول مع اللمعة المتحركة (Shimmer) */
+/* هنا يتم تطبيق الألوان الغامقة واللمعة المتحركة (Shimmer) على البطاقة فقط */
 .login-card {
   width: 100%;
-  background: rgba(255, 255, 255, 0.94);
-  backdrop-filter: blur(16px);
-  color: #1f2937;
+  background: linear-gradient(135deg, #033454, #022338, #071321);
+  background-size: 300% 300%;
+  animation: cardGradientShift 10s ease infinite;
+  color: #ffffff;
   padding: 35px 25px;
   border-radius: 24px;
-  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.35), 0 0 25px rgba(2, 132, 199, 0.3);
-  border: 1.5px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 25px rgba(2, 132, 199, 0.25);
+  border: 1.5px solid rgba(56, 189, 248, 0.4);
   position: relative;
   overflow: hidden;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  animation: fadeInUp 0.6s ease;
+  animation-name: cardGradientShift, fadeInUp;
+  animation-duration: 10s, 0.6s;
+  animation-iteration-count: infinite, 1;
+}
+
+@keyframes cardGradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 .login-card::before {
@@ -148,24 +152,17 @@
   background: linear-gradient(
     60deg,
     transparent,
-    rgba(255, 255, 255, 0.25),
+    rgba(255, 255, 255, 0.2),
     transparent
   );
   transform: rotate(30deg);
-  animation: shimmerEffect 5s linear infinite;
+  animation: shimmerEffect 4.5s linear infinite;
   pointer-events: none;
 }
 
 @keyframes shimmerEffect {
   0% { transform: translateY(-100%) rotate(30deg); }
   100% { transform: translateY(100%) rotate(30deg); }
-}
-
-.dark .login-card {
-  background: rgba(15, 23, 42, 0.90);
-  color: #f1f1f1;
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.6), 0 0 30px rgba(2, 132, 199, 0.2);
 }
 
 .login-card.vault-card-wide {
@@ -181,14 +178,11 @@
   font-size: 26px;
   font-weight: 700;
   margin-bottom: 6px;
+  color: #ffffff;
 }
 
 .login-header p {
   font-size: 13px;
-  color: #6b7280;
-}
-
-.dark .login-header p {
   color: #94a3b8;
 }
 
@@ -208,31 +202,22 @@
 .input-group label {
   font-size: 12px;
   font-weight: 600;
-  color: #374151;
-}
-
-.dark .input-group label {
   color: #cbd5e1;
 }
 
 .input-wrapper {
   display: flex;
   align-items: center;
-  border: 1.5px solid #d1d5db;
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
   border-radius: 12px;
   padding: 0 12px;
-  background: #f9fafb;
+  background: rgba(15, 23, 42, 0.6);
   transition: all 0.3s ease;
 }
 
 .input-wrapper:focus-within {
-  border-color: #0369a1;
-  box-shadow: 0 0 0 4px rgba(3, 105, 161, 0.15);
-}
-
-.dark .input-wrapper {
-  border-color: #475569;
-  background: #020617;
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.25);
 }
 
 .icon {
@@ -247,11 +232,15 @@
   font-size: 14px;
   outline: none;
   background: transparent;
-  color: inherit;
+  color: #ffffff;
+}
+
+.input-wrapper input::placeholder {
+  color: #64748b;
 }
 
 .login-btn {
-  background-color: #0369a1;
+  background-color: #0284c7;
   color: white;
   border: none;
   padding: 14px;
@@ -261,13 +250,12 @@
   cursor: pointer;
   transition: all 0.2s ease;
   margin-top: 8px;
-  box-shadow: 0 4px 12px rgba(3, 105, 161, 0.3);
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4);
 }
 
 .login-btn:hover {
-  background-color: #0284c7;
+  background-color: #0369a1;
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(3, 105, 161, 0.4);
 }
 
 .forgot-link-inline {
@@ -284,7 +272,7 @@
 }
 
 .link-text {
-  color: #0369a1;
+  color: #38bdf8;
   cursor: pointer;
   font-weight: 600;
   transition: opacity 0.2s;
@@ -295,25 +283,21 @@
   opacity: 0.8;
 }
 
-.dark .link-text {
-  color: #38bdf8;
-}
-
 .error-text {
-  color: #ef4444;
+  color: #f87171;
   font-size: 12px;
   text-align: center;
   margin: 0;
 }
 
 .success-text {
-  color: #22c55e;
+  color: #4ade80;
   font-size: 12px;
   text-align: center;
   margin: 0;
 }
 
-/* تنسيقات الخزنة الموسعة */
+/* تنسيقات الخزنة الداخلية */
 .vault-container {
   display: flex;
   flex-direction: column;
@@ -327,13 +311,9 @@
 
 .vault-user-email {
   font-size: 13px;
-  color: #0369a1;
+  color: #38bdf8;
   font-weight: 600;
   margin-top: 4px;
-}
-
-.dark .vault-user-email {
-  color: #38bdf8;
 }
 
 .vault-nav-tabs {
@@ -346,9 +326,9 @@
   flex: 1;
   padding: 10px;
   border-radius: 10px;
-  border: 1.5px solid #d1d5db;
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
   background: transparent;
-  color: inherit;
+  color: #ffffff;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -356,14 +336,13 @@
 }
 
 .tab-btn:hover {
-  border-color: #0369a1;
+  border-color: #38bdf8;
 }
 
 .tab-btn.active {
-  background-color: #0369a1;
+  background-color: #0284c7;
   color: white;
-  border-color: #0369a1;
-  box-shadow: 0 4px 12px rgba(3, 105, 161, 0.3);
+  border-color: #0284c7;
 }
 
 .categories-bar {
@@ -376,24 +355,24 @@
 .cat-pill {
   padding: 6px 14px;
   border-radius: 20px;
-  border: 1.5px solid #cbd5e1;
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
   background: transparent;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  color: inherit;
+  color: #ffffff;
   white-space: nowrap;
   transition: all 0.2s ease;
 }
 
 .cat-pill:hover {
-  background: rgba(3, 105, 161, 0.1);
+  background: rgba(2, 132, 199, 0.2);
 }
 
 .cat-pill.active {
-  background-color: #0369a1;
+  background-color: #0284c7;
   color: white;
-  border-color: #0369a1;
+  border-color: #0284c7;
 }
 
 .upload-section {
@@ -402,7 +381,7 @@
 
 .upload-btn {
   display: block;
-  background-color: #0369a1;
+  background-color: #0284c7;
   color: white;
   padding: 12px;
   border-radius: 12px;
@@ -410,11 +389,11 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(3, 105, 161, 0.2);
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
 }
 
 .upload-btn:hover {
-  background-color: #0284c7;
+  background-color: #0369a1;
   transform: translateY(-2px);
 }
 
@@ -425,12 +404,8 @@
   max-height: 400px;
   overflow-y: auto;
   padding: 12px;
-  background: rgba(0, 0, 0, 0.04);
+  background: rgba(0, 0, 0, 0.2);
   border-radius: 16px;
-}
-
-.dark .gallery-grid-full {
-  background: rgba(255, 255, 255, 0.03);
 }
 
 .image-card-full {
@@ -439,13 +414,12 @@
   overflow: hidden;
   height: 130px;
   background: #000;
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+  transition: transform 0.3s ease;
 }
 
 .image-card-full:hover {
   transform: translateY(-4px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
 }
 
 .image-card-full img {
@@ -463,7 +437,6 @@
   font-size: 10px;
   padding: 3px 8px;
   border-radius: 6px;
-  backdrop-filter: blur(4px);
 }
 
 .delete-icon-btn {
@@ -502,7 +475,6 @@
   border-radius: 6px;
   cursor: pointer;
   font-weight: 600;
-  transition: opacity 0.2s;
 }
 
 .restore-btn {
@@ -519,16 +491,12 @@
   grid-column: span 4;
   text-align: center;
   font-size: 14px;
-  color: #6b7280;
+  color: #94a3b8;
   padding: 50px 20px;
 }
 
-.dark .no-images-text {
-  color: #94a3b8;
-}
-
 .logout-btn {
-  background-color: #dc2626;
+  background-color: #ef4444;
   color: white;
   border: none;
   padding: 12px;
@@ -540,19 +508,17 @@
 }
 
 .logout-btn:hover {
-  background-color: #b91c1c;
+  background-color: #dc2626;
   transform: translateY(-1px);
 }
 
 .footer-copyright {
   font-size: 12px;
-  opacity: 0.85;
+  opacity: 0.7;
   margin-top: 20px;
-  color: white;
-  z-index: 10;
 }
 
-/* --- حركات الأنيميشن --- */
+/* الأنيميشن */
 @keyframes fadeIn {
   from { opacity: 0; transform: scale(0.97); }
   to { opacity: 1; transform: scale(1); }
