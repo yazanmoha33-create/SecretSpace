@@ -7,7 +7,7 @@
   font-family: 'Inter', sans-serif;
 }
 
-/* خلفية الصفحة العامة (الخارجية) فاتحة وهادئة مع حركة تدريجية خفيفة وبطيئة */
+/* 1. الخلفية العامة (الخارجية) للصفحة: ألوان فاتحة وهادئة مع حركة بطيئة */
 .app-container {
   min-height: 100vh;
   display: flex;
@@ -23,13 +23,13 @@
 
 .app-container.light {
   background: linear-gradient(135deg, #e0f2fe, #f0fdf4, #f3e8ff, #e2e8f0);
-  animation: softGentleShift 20s ease infinite;
+  animation: softGentleShift 22s ease infinite;
   color: #1f2937;
 }
 
 .app-container.dark {
   background: linear-gradient(135deg, #090d16, #0f172a, #171d30, #0b0f19);
-  animation: softGentleShift 20s ease infinite;
+  animation: softGentleShift 22s ease infinite;
   color: #f1f1f1;
 }
 
@@ -127,7 +127,7 @@
   opacity: 0.85;
 }
 
-/* البطاقة الداخلية (تسجيل الدخول والخزنة) أصبحت بالألوان الغامقة الحيوية مع اللمعة والحركة */
+/* 2. البطاقة الداخلية (تسجيل الدخول والخزنة): أصبحت دائماً باللون الغامق مع الحركات واللمعة */
 .login-card {
   width: 100%;
   background: linear-gradient(135deg, #033454, #022338, #071321);
