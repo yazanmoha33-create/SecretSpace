@@ -2,11 +2,17 @@ import React, { useState, useEffect } from 'react';
 import './App.css';
 
 function App() {
-  const [theme, setTheme] = useState('light');
+  const [theme, setTheme] = useState('dark');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  
+  // PIN Lock State
+  const [isLocked, setIsLocked] = useState(false);
+  const [enteredPin, setEnteredPin] = useState('');
+
   const [authMode, setAuthMode] = useState('login'); // 'login', 'signup', 'forgot'
   
   const [identifier, setIdentifier] = useState('');
+  const [fullName, setFullName] = useState(''); // NEW: Optional personal name field
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   
@@ -20,8 +26,8 @@ function App() {
   
   // Search, Sorting & Grid View
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState('newest'); // 'newest', 'oldest'
-  const [gridColumns, setGridColumns] = useState('normal'); // 'normal', 'large'
+  const [sortBy, setSortBy] = useState('newest'); 
+  const [gridColumns, setGridColumns] = useState('normal'); 
 
   // Lightbox & Slideshow states
   const [lightboxImg, setLightboxImg] = useState(null);
@@ -35,18 +41,18 @@ function App() {
   const [oldPasswordInput, setOldPasswordInput] = useState('');
   const [newPasswordInput, setNewPasswordInput] = useState('');
 
-  // NEW Feature 4: Temporary Share Link modal state
+  // Share Link modal state
   const [shareLinkModal, setShareLinkModal] = useState(null);
 
-  // NEW Feature 5 & 6 & 8: Upload enhancements (Compression, Caption, Filter)
+  // Upload enhancements
   const [imageCaption, setImageCaption] = useState('');
-  const [imageFilter, setImageFilter] = useState('none'); // 'none', 'grayscale', 'sepia'
+  const [imageFilter, setImageFilter] = useState('none'); 
   const [autoCompress, setAutoCompress] = useState(true);
 
-  // NEW Feature 1: Auto-lock timer state
+  // Auto-lock timer state
   const [lastActivityTime, setLastActivityTime] = useState(Date.now());
 
-  // NEW Feature 2: Failed logins tracker
+  // Failed logins tracker
   const [failedLoginsCount, setFailedLoginsCount] = useState(() => {
     try {
       const saved = localStorage.getItem('vault_failed_logins');
@@ -99,7 +105,6 @@ function App() {
     setActivityLogs(prev => [newLog, ...prev]);
   };
 
-  // Save states automatically
   useEffect(() => {
     localStorage.setItem('vault_images', JSON.stringify(images));
   }, [images]);
@@ -124,9 +129,9 @@ function App() {
     localStorage.setItem('vault_failed_logins', JSON.stringify(failedLoginsCount));
   }, [failedLoginsCount]);
 
-  // NEW Feature 1: Auto-Lock Idle Monitor
+  // Auto-Lock Idle Monitor & PIN Lock Trigger
   useEffect(() => {
-    if (!isLoggedIn) return;
+    if (!isLoggedIn || isLocked) return;
 
     const handleActivity = () => setLastActivityTime(Date.now());
     window.addEventListener('mousemove', handleActivity);
@@ -135,8 +140,8 @@ function App() {
     const interval = setInterval(() => {
       const idleLimitMs = (securitySettings.autoLockMinutes || 2) * 60 * 1000;
       if (Date.now() - lastActivityTime > idleLimitMs) {
-        setIsLoggedIn(false);
-        addLog('Vault auto-locked due to inactivity');
+        setIsLocked(true);
+        addLog('Vault locked due to inactivity (PIN required)');
       }
     }, 10000);
 
@@ -145,7 +150,7 @@ function App() {
       window.removeEventListener('keydown', handleActivity);
       clearInterval(interval);
     };
-  }, [isLoggedIn, lastActivityTime, securitySettings.autoLockMinutes]);
+  }, [isLoggedIn, isLocked, lastActivityTime, securitySettings.autoLockMinutes]);
 
   // Slideshow Effect
   useEffect(() => {
@@ -173,7 +178,6 @@ function App() {
       setErrorMsg('Please enter email/phone and password');
       return;
     }
-    // Check password against security settings
     if (password !== securitySettings.accountPassword && password !== 'admin') {
       setFailedLoginsCount(prev => prev + 1);
       setErrorMsg('Invalid credentials. Attempt logged.');
@@ -185,7 +189,7 @@ function App() {
     setTimeout(() => {
       setIsLoading(false);
       setIsLoggedIn(true);
-      setUserProfile(prev => ({ ...prev, name: identifier }));
+      setUserProfile(prev => ({ ...prev, name: fullName ? fullName : identifier }));
       addLog('Signed in to vault successfully');
     }, 800);
   };
@@ -193,7 +197,7 @@ function App() {
   const handleSignup = (e) => {
     e.preventDefault();
     if (!identifier || !password || !confirmPassword) {
-      setErrorMsg('Please fill in all fields');
+      setErrorMsg('Please fill in required fields');
       return;
     }
     if (password !== confirmPassword) {
@@ -228,7 +232,19 @@ function App() {
     }, 800);
   };
 
-  // NEW Feature 5: Auto-Compression via Canvas resizing
+  const handleUnlockPin = (e) => {
+    e.preventDefault();
+    if (enteredPin === securitySettings.pin) {
+      setIsLocked(false);
+      setEnteredPin('');
+      setErrorMsg('');
+      addLog('Vault unlocked via PIN');
+    } else {
+      setErrorMsg('Incorrect PIN code');
+      addLog('Failed PIN unlock attempt');
+    }
+  };
+
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -238,7 +254,6 @@ function App() {
           setPreviewUrl(reader.result);
           return;
         }
-        // Compress image using canvas
         const img = new Image();
         img.src = reader.result;
         img.onload = () => {
@@ -390,7 +405,6 @@ function App() {
     }
   };
 
-  // Filtered and Sorted Images
   const filteredImages = images.filter(img => {
     const matchesCategory = selectedCategory === 'All' || img.category === selectedCategory;
     const matchesSearch = img.category.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -404,14 +418,12 @@ function App() {
   });
 
   const favoriteImages = images.filter(img => img.isFavorite);
-
-  // NEW Feature 7: Storage calculation (approximate string length in KB)
   const totalStorageKb = Math.round(JSON.stringify(images).length / 1024);
-  const maxStorageKb = 5120; // 5 MB LocalStorage limit standard
+  const maxStorageKb = 5120; 
   const storagePercentage = Math.min(Math.round((totalStorageKb / maxStorageKb) * 100), 100);
 
   return (
-    <div className={`app-container ${theme}`}>
+    <div className={`app-container ${theme} vault-bg-pattern`}>
       <div className="top-bar-settings">
         <button onClick={toggleTheme} className="theme-toggle-btn">
           {theme === 'light' ? '🌙 Dark Mode' : '☀️ Light Mode'}
@@ -504,6 +516,20 @@ function App() {
                   <form onSubmit={handleSignup} className="login-form">
                     {errorMsg && <p className="error-text">{errorMsg}</p>}
                     {successMsg && <p className="success-text">{successMsg}</p>}
+
+                    {/* NEW: Optional Personal Name Field */}
+                    <div className="input-group">
+                      <label>Personal Name (Optional)</label>
+                      <div className="input-wrapper">
+                        <span className="icon">👤</span>
+                        <input 
+                          type="text" 
+                          placeholder="Enter your personal name"
+                          value={fullName}
+                          onChange={(e) => setFullName(e.target.value)}
+                        />
+                      </div>
+                    </div>
                     
                     <div className="input-group">
                       <label>Email or Phone Number</label>
@@ -603,6 +629,31 @@ function App() {
               )}
 
             </div>
+          ) : isLocked ? (
+            /* PIN Lock Screen */
+            <div className="animate-fade" style={{ textAlign: 'center', padding: '20px' }}>
+              <div className="login-header">
+                <h2>🔒 Vault Locked</h2>
+                <p>Enter your security PIN code to continue</p>
+              </div>
+              <form onSubmit={handleUnlockPin} className="login-form">
+                {errorMsg && <p className="error-text">{errorMsg}</p>}
+                <div className="input-group">
+                  <div className="input-wrapper">
+                    <span className="icon">🔑</span>
+                    <input 
+                      type="password" 
+                      maxLength="6"
+                      placeholder="Enter PIN (default 1234)"
+                      value={enteredPin}
+                      onChange={(e) => setEnteredPin(e.target.value)}
+                      style={{ textAlign: 'center', letterSpacing: '4px' }}
+                    />
+                  </div>
+                </div>
+                <button type="submit" className="login-btn" style={{ background: '#2563eb' }}>Unlock Vault</button>
+              </form>
+            </div>
           ) : (
             <div className="vault-container">
               <div className="vault-header">
@@ -615,7 +666,7 @@ function App() {
                 </div>
               </div>
 
-              {/* NEW Feature 9: Quick Bookmark Bar */}
+              {/* Quick Bookmark Bar */}
               <div style={{ display: 'flex', gap: '5px', overflowX: 'auto', paddingBottom: '5px', marginBottom: '8px' }}>
                 <button onClick={() => setSelectedCategory('All')} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: '#38bdf8', fontSize: '11px', padding: '3px 8px', borderRadius: '6px', cursor: 'pointer', whiteSpace: 'nowrap' }}>⚡ Quick: All</button>
                 <button onClick={() => setActiveTab('favorites')} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: '#38bdf8', fontSize: '11px', padding: '3px 8px', borderRadius: '6px', cursor: 'pointer', whiteSpace: 'nowrap' }}>⭐ Favorites</button>
@@ -623,8 +674,8 @@ function App() {
                 <button onClick={() => setActiveTab('faq')} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: '#38bdf8', fontSize: '11px', padding: '3px 8px', borderRadius: '6px', cursor: 'pointer', whiteSpace: 'nowrap' }}>❓ FAQ</button>
               </div>
 
-              {/* Navigation Tabs including all screens + FAQ */}
-              <div className="vault-nav-tabs" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
+              {/* Navigation Tabs with improved spacing */}
+              <div className="vault-nav-tabs" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', marginBottom: '12px' }}>
                 <button className={`tab-btn ${activeTab === 'gallery' ? 'active' : ''}`} onClick={() => setActiveTab('gallery')}>📁 Gallery</button>
                 <button className={`tab-btn ${activeTab === 'favorites' ? 'active' : ''}`} onClick={() => setActiveTab('favorites')}>⭐ Favorites</button>
                 <button className={`tab-btn ${activeTab === 'trash' ? 'active' : ''}`} onClick={() => setActiveTab('trash')}>🗑️ Trash</button>
@@ -650,7 +701,6 @@ function App() {
                     </div>
                   </div>
 
-                  {/* Controls: Sorting, Slideshow, Multi-select & NEW Grid View toggle */}
                   <div style={{ display: 'flex', gap: '6px', marginBottom: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                     <select 
                       value={sortBy} 
@@ -661,7 +711,6 @@ function App() {
                       <option value="oldest">Oldest First</option>
                     </select>
 
-                    {/* NEW Feature 3: Grid View Toggle */}
                     <button 
                       onClick={() => setGridColumns(gridColumns === 'normal' ? 'large' : 'normal')}
                       style={{ padding: '6px 8px', borderRadius: '8px', background: '#334155', color: '#fff', border: 'none', fontSize: '11px', cursor: 'pointer' }}
@@ -716,7 +765,6 @@ function App() {
                     <div className="preview-container animate-fade" style={{ background: 'rgba(0,0,0,0.35)', padding: '15px', borderRadius: '16px', textAlign: 'center', margin: '10px 0', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
                       <p style={{ fontSize: '13px', marginBottom: '8px', color: '#38bdf8', fontWeight: '600' }}>Image Preview</p>
                       
-                      {/* NEW Feature 8: Filter applied on preview */}
                       <img 
                         src={previewUrl} 
                         alt="Preview" 
@@ -737,7 +785,6 @@ function App() {
                         </select>
                       </div>
 
-                      {/* NEW Feature 6: Image Caption Input */}
                       <div className="input-group" style={{ marginBottom: '8px' }}>
                         <input 
                           type="text" 
@@ -748,7 +795,6 @@ function App() {
                         />
                       </div>
 
-                      {/* NEW Feature 8: Filter Selector */}
                       <div className="input-group" style={{ marginBottom: '8px' }}>
                         <select 
                           value={imageFilter} 
@@ -790,7 +836,6 @@ function App() {
                           />
                           <span className="img-badge">{img.category}</span>
                           
-                          {/* NEW Feature 6: Display caption snippet */}
                           <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', background: 'rgba(0,0,0,0.6)', padding: '2px 6px', fontSize: '10px', color: '#cbd5e1', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {img.caption}
                           </div>
@@ -912,7 +957,6 @@ function App() {
                 <div className="animate-fade" style={{ padding: '15px 0', textAlign: 'left' }}>
                   <h3 style={{ color: '#38bdf8', marginBottom: '15px' }}>Vault Analytics & Storage</h3>
                   
-                  {/* NEW Feature 7: Storage Bar Meter */}
                   <div style={{ background: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '12px', marginBottom: '15px' }}>
                     <p style={{ fontSize: '13px', marginBottom: '6px' }}>💾 Storage Used: <b>{totalStorageKb} KB</b> / 5 MB</p>
                     <div style={{ width: '100%', background: '#334155', borderRadius: '6px', height: '10px', overflow: 'hidden', marginBottom: '10px' }}>
@@ -940,12 +984,10 @@ function App() {
                 <div className="animate-fade" style={{ padding: '15px 0', textAlign: 'left' }}>
                   <h3 style={{ color: '#38bdf8', marginBottom: '15px' }}>Security Configuration</h3>
                   
-                  {/* NEW Feature 2: Display Failed Logins */}
                   <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '10px', borderRadius: '8px', marginBottom: '15px', fontSize: '12px', color: '#f87171' }}>
                     ⚠️ Failed Login Attempts Recorded: <b>{failedLoginsCount}</b>
                   </div>
 
-                  {/* NEW Feature 1: Auto-lock timer setting */}
                   <div className="input-group" style={{ marginBottom: '10px' }}>
                     <label>Auto-Lock Idle Time (Minutes)</label>
                     <select 
@@ -959,7 +1001,6 @@ function App() {
                     </select>
                   </div>
 
-                  {/* NEW Feature 5: Auto-Compression toggle setting */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
                     <input 
                       type="checkbox" 
@@ -1053,10 +1094,10 @@ function App() {
                 </div>
               )}
 
-              {/* Lightbox / Slideshow Modal + NEW Temporary Share Link feature */}
+              {/* Lightbox Modal with animate-fade-in */}
               {lightboxImg && (
                 <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.85)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 1100, padding: '20px' }} onClick={() => { setLightboxImg(null); setIsSlideshowActive(false); }}>
-                  <div style={{ background: '#1e293b', padding: '20px', borderRadius: '16px', maxWidth: '500px', width: '90%', textAlign: 'center', border: '1px solid rgba(56, 189, 248, 0.4)' }} onClick={(e) => e.stopPropagation()}>
+                  <div className="animate-fade-in" style={{ background: '#1e293b', padding: '20px', borderRadius: '16px', maxWidth: '500px', width: '90%', textAlign: 'center', border: '1px solid rgba(56, 189, 248, 0.4)' }} onClick={(e) => e.stopPropagation()}>
                     <img 
                       src={lightboxImg.url} 
                       alt="Enlarged view" 
@@ -1069,7 +1110,6 @@ function App() {
                     <p style={{ color: '#cbd5e1', fontSize: '12px', marginBottom: '4px' }}>Note: "{lightboxImg.caption}"</p>
                     <p style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '12px' }}>Added on: {lightboxImg.date}</p>
                     
-                    {/* NEW Feature 4: Generate Temporary Share Link */}
                     <button 
                       onClick={() => setShareLinkModal(`https://photovault.secure/share/${lightboxImg.id}?token=temp_secure`)}
                       style={{ width: '100%', marginBottom: '8px', padding: '6px', background: '#0284c7', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '12px', cursor: 'pointer' }}
